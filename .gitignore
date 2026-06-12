@@ -1,0 +1,16 @@
+# Sensitive files — NEVER commit
+.work-log.env
+work-log-data.json
+*.jsonl
+*.tmp
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+.idea/

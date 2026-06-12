@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Work Log</title>
+<style>
+/* ============================================================
+   Daily Work Log  v7  —  日系墨纸  —  Japanese Ink & Paper
+   Design: warm, layered, no-border cards, animated interactions
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --paper:#f3efe8; --sidebar:#ebe5db; --surface:#faf7f3; --white:#fffefc;
+  --ink:#1a1a1a; --ink-2:#595959; --ink-3:#8f8f8f;
+  --line:#dfd8cc; --line-light:#ebe4d6; --hover:#eee6da; --snow:#f6f2ec;
+  --sage:#7d9e7d; --sage-bg:#eef3ee; --rust:#c97a5e; --rust-bg:#f9f1ec;
+  --blue:#8a9fc0; --blue-bg:#f0f3f8; --amber:#c48f56; --amber-bg:#f9f3ea;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.035),0 1px 2px rgba(0,0,0,.025);
+  --shadow:0 2px 6px rgba(0,0,0,.04),0 1px 4px rgba(0,0,0,.03);
+  --shadow-lg:0 4px 14px rgba(0,0,0,.05),0 2px 6px rgba(0,0,0,.035);
+  --radius:10px; --radius-sm:6px; --radius-xs:4px;
+  --font:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font-mono:"SF Mono","Fira Code","Cascadia Code",monospace;
+  --ease:cubic-bezier(.25,.1,.25,1);
+}
+
+html,body{height:100%}
+body{font-family:var(--font);background:var(--paper);color:var(--ink);display:flex;line-height:1.65;-webkit-font-smoothing:antialiased}
+#app{display:flex;width:100%;height:100vh;overflow:hidden}
+
+/* ---- Server banner ---- */
+#server-banner{position:fixed;top:0;left:0;right:0;z-index:100;padding:8px 24px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:12px;font-weight:500;transition:all .35s var(--ease)}
+#server-banner.offline{background:var(--amber-bg);border-bottom:1px solid #e5d0b0;color:var(--amber)}
+#server-banner.online{background:var(--blue-bg);border-bottom:1px solid #c8d4e8;color:var(--blue)}
+#server-banner.hidden{display:none}
+#server-banner .sb-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+#server-banner.offline .sb-dot{background:var(--amber);animation:pulse-amber 2.5s ease-in-out infinite}
+#server-banner.online .sb-dot{background:var(--blue)}
+#server-banner button{padding:3px 12px;border-radius:12px;cursor:pointer;font-family:var(--font);font-size:11px;font-weight:500;transition:all .2s var(--ease);background:var(--white)}
+#server-banner.offline button{border:1px solid var(--amber);color:var(--amber)}
+#server-banner.offline button:hover{background:var(--amber);color:#fff}
+@keyframes pulse-amber{0%,100%{box-shadow:0 0 0 0 rgba(196,143,86,.35)}50%{box-shadow:0 0 0 10px rgba(196,143,86,0)}}
+
+/* ---- Sidebar — warm gray, integrated ---- */
+#sidebar{width:228px;min-width:228px;background:var(--sidebar);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:30px 20px 24px;user-select:none;-webkit-user-select:none;overflow-y:auto}
+#logo{font-size:16px;font-weight:700;letter-spacing:-.3px;color:var(--ink);margin-bottom:6px;display:flex;align-items:center;gap:7px}
+#logo .dot{width:8px;height:8px;border-radius:2px;background:var(--ink)}
+#srv-indicator{display:flex;align-items:center;gap:5px;margin-bottom:14px;font-size:10px;color:var(--ink-3)}
+#srv-indicator .si-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+#srv-indicator .si-dot.ok{background:var(--sage)}#srv-indicator .si-dot.no{background:var(--amber)}
+
+/* Side nav */
+#side-nav{display:flex;gap:4px;margin-bottom:16px;background:var(--snow);border-radius:var(--radius-sm);padding:3px}
+#side-nav button{flex:1;padding:8px 0;border:none;border-radius:3px;background:0 0;cursor:pointer;font-family:var(--font);font-size:12px;font-weight:500;color:var(--ink-3);text-align:center;transition:all .2s var(--ease)}
+#side-nav button.active{background:var(--white);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+#side-nav button:hover:not(.active){color:var(--ink-2)}
+.side-panel{display:flex;flex-direction:column;flex:1}
+.side-panel.hidden{display:none}
+
+/* Calendar */
+#cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+#cal-nav span{font-size:12px;font-weight:600;color:var(--ink-2);letter-spacing:.3px}
+#cal-nav button{width:28px;height:28px;border-radius:var(--radius-xs);border:none;background:0 0;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-size:14px;transition:all .2s var(--ease);font-family:var(--font)}
+#cal-nav button:hover{background:var(--hover);color:var(--ink)}
+#cal-dow{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;margin-bottom:4px}
+#cal-dow span{font-size:10px;font-weight:500;color:var(--ink-3);letter-spacing:.3px;padding:4px 0}
+#cal-dow span:first-child,#cal-dow span:last-child{color:#c0b8a0}
+#cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+#cal-grid .day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--ink-2);border-radius:50%;cursor:pointer;transition:all .2s var(--ease);position:relative;font-variant-numeric:tabular-nums}
+#cal-grid .day:hover{background:var(--hover)}
+#cal-grid .day.today{color:var(--ink);font-weight:600;box-shadow:inset 0 0 0 1.5px var(--ink)}
+#cal-grid .day.active{background:var(--ink);color:#fff;font-weight:600;box-shadow:none}
+#cal-grid .day.has-data::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:var(--ink-3)}
+#cal-grid .day.active.has-data::after{background:#fff}
+#sidebar-divider{height:1px;background:var(--line);margin:20px 0 16px}
+.side-stats{display:flex;flex-direction:column;gap:8px}
+.side-stats .stat{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:var(--ink-3)}
+.side-stats .stat .val{font-size:12px;font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums}
+
+/* Project pills */
+#proj-filters{margin-bottom:12px;display:flex;flex-wrap:wrap;gap:4px}
+#proj-filters .proj-pill{padding:4px 11px;font-size:10px;font-weight:500;border:1px solid var(--line);border-radius:12px;background:var(--white);color:var(--ink-3);cursor:pointer;font-family:var(--font);transition:all .2s var(--ease)}
+#proj-filters .proj-pill:hover{background:var(--hover);color:var(--ink-2);border-color:#d0c8b8}
+#proj-filters .proj-pill.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* ---- Main ---- */
+#main{flex:1;overflow-y:auto;overflow-x:hidden;display:flex;justify-content:center}
+#content{width:100%;max-width:680px;padding:38px 40px 64px;display:flex;flex-direction:column;gap:34px}
+.view{display:flex;flex-direction:column;gap:34px}
+.view.hidden{display:none}
+
+/* ---- Buttons ---- */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 15px;font-size:12px;font-weight:500;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink-2);cursor:pointer;font-family:var(--font);line-height:1.4;transition:all .2s var(--ease);white-space:nowrap}
+.btn:hover{background:var(--hover);color:var(--ink);border-color:#d0c8b8}
+.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn.primary:hover{background:#333;border-color:#333}
+.btn.danger{color:#c06050;border-color:#e0c0b8}
+.btn.danger:hover{background:#faf3f2}
+
+/* ---- Date header ---- */
+#date-header{display:flex;align-items:baseline;justify-content:space-between}
+#date-header h2{font-size:28px;font-weight:700;letter-spacing:-.6px}
+#date-header .wd{font-size:14px;font-weight:400;color:var(--ink-3);margin-left:10px}
+#header-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+
+/* ---- Week strip ---- */
+#week-strip{display:flex;gap:0;margin-top:-6px;background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden}
+#week-strip .wd-item{flex:1;text-align:center;padding:9px 0 7px;font-size:11px;color:var(--ink-3);cursor:pointer;transition:all .2s var(--ease);display:flex;flex-direction:column;align-items:center;gap:2px}
+#week-strip .wd-item .wd-label{font-size:10px;letter-spacing:.4px}
+#week-strip .wd-item .wd-num{font-size:15px;font-weight:500;color:var(--ink-2);transition:all .2s var(--ease)}
+#week-strip .wd-item:hover{background:var(--hover)}
+#week-strip .wd-item.current{background:var(--ink)}
+#week-strip .wd-item.current .wd-label{color:rgba(255,255,255,.6)}
+#week-strip .wd-item.current .wd-num{font-weight:700;color:#fff}
+
+/* ---- Section cards — NO borders, soft shadow ---- */
+.section{background:var(--surface);border:none;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:box-shadow .2s var(--ease)}
+.section:hover{box-shadow:var(--shadow-lg)}
+.section-head{display:flex;align-items:center;justify-content:space-between;padding:15px 22px;font-size:13px;font-weight:600;color:var(--ink);letter-spacing:-.1px;border-bottom:1px solid var(--line-light)}
+.section-head .badge{font-size:11px;font-weight:500;color:var(--ink-3)}
+
+/* ---- Task input ---- */
+#task-input-row{display:flex;align-items:center;background:var(--white);border-bottom:1px solid var(--line-light)}
+#task-input{flex:1;border:none;padding:13px 22px;font-size:13px;font-family:var(--font);color:var(--ink);background:0 0;outline:0}
+#task-input::placeholder{color:var(--ink-3)}
+#task-proj{width:105px;border:none;border-left:1px solid var(--line-light);padding:13px 10px;font-size:12px;font-family:var(--font);color:var(--ink-2);background:0 0;outline:0}
+#task-proj::placeholder{color:var(--ink-3);font-size:11px}
+#add-task-btn{padding:13px 18px;border:none;background:0 0;color:var(--ink-2);font-size:13px;font-weight:500;cursor:pointer;font-family:var(--font);border-left:1px solid var(--line-light);transition:all .2s var(--ease);white-space:nowrap}
+#add-task-btn:hover{background:var(--hover);color:var(--ink)}
+
+/* ---- Task list ---- */
+#task-list{list-style:none}
+#task-list li{display:flex;align-items:center;gap:10px;padding:12px 22px;font-size:13px;transition:all .15s var(--ease);position:relative}
+#task-list li:not(:last-child){border-bottom:1px solid var(--line-light)}
+#task-list li:hover{background:var(--snow)}
+
+/* Checkbox — polished */
+#task-list .check{width:17px;height:17px;flex-shrink:0;border-radius:4px;border:1.5px solid #c8c2b6;cursor:pointer;position:relative;transition:all .25s var(--ease);background:var(--white)}
+#task-list .check:hover{border-color:var(--sage);transform:scale(1.08)}
+#task-list li.done .check{background:var(--sage);border-color:var(--sage)}
+#task-list li.done .check::after{content:'';position:absolute;left:5px;top:2px;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);animation:check-in .25s var(--ease)}
+@keyframes check-in{0%{transform:rotate(45deg) scale(0)}60%{transform:rotate(45deg) scale(1.2)}100%{transform:rotate(45deg) scale(1)}}
+
+/* Task text */
+#task-list .task-text{flex:1;word-break:break-word;line-height:1.5;transition:all .3s var(--ease)}
+#task-list li.done .task-text{text-decoration:line-through;color:var(--ink-3);opacity:.65}
+
+/* Project tag */
+#task-list .task-proj-tag{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500;flex-shrink:0;letter-spacing:.2px}
+.task-proj-tag.c0{background:#ece7e0;color:#8b7d6e}
+.task-proj-tag.c1{background:#f0e8dc;color:#ab8b6a}
+.task-proj-tag.c2{background:#e6efe7;color:#6d8e6d}
+.task-proj-tag.c3{background:#f2e8dc;color:#b8805a}
+.task-proj-tag.c4{background:#ece8f2;color:#867a9e}
+.task-proj-tag.c5{background:#e8e6e0;color:#7d7d7d}
+
+/* Timer */
+.task-timer{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.task-time-val{font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums;font-family:var(--font-mono);min-width:38px;text-align:right}
+.timer-dot{width:8px;height:8px;border-radius:50%;background:var(--ink-3);cursor:pointer;transition:all .25s var(--ease);flex-shrink:0}
+.timer-dot:hover{background:var(--ink-2);transform:scale(1.4)}
+.timer-dot.running{background:var(--rust);animation:pulse 2s ease-in-out infinite}
+.timer-dot.running:hover{background:#b55a3e}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(201,122,94,.4)}50%{box-shadow:0 0 0 8px rgba(201,122,94,0)}}
+
+/* Delete */
+.task-del{background:0 0;border:none;cursor:pointer;color:var(--ink-3);font-size:16px;padding:2px 5px;border-radius:4px;line-height:1;opacity:0;transition:all .15s var(--ease);flex-shrink:0}
+#task-list li:hover .task-del{opacity:1}
+.task-del:hover{color:#c06050;background:#faf3f2}
+
+/* ---- Empty ---- */
+.empty-state{padding:42px 20px;text-align:center;color:var(--ink-3);font-size:13px;line-height:1.8}
+.empty-state .icon{font-size:38px;margin-bottom:10px;opacity:.3}
+
+/* ---- Notes ---- */
+#notes-area{width:100%;min-height:200px;border:none;resize:vertical;font-family:var(--font);font-size:13px;line-height:1.85;color:var(--ink);outline:0;padding:20px 22px;background:0 0}
+#notes-area::placeholder{color:var(--ink-3)}
+
+/* ---- Summary ---- */
+#daily-summary{display:flex;gap:28px;flex-wrap:wrap;font-size:12px;color:var(--ink-3);padding:0 6px}
+#daily-summary .sum-item{display:flex;align-items:baseline;gap:5px}
+#daily-summary .sum-val{font-weight:600;font-size:13px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+
+/* ---- AI result ---- */
+#ai-summary-result{background:var(--surface);border:none;border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 22px;font-size:13px;line-height:1.8;white-space:pre-wrap;color:var(--ink)}
+
+/* ---- Toast ---- */
+#toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ink);color:#fff;padding:9px 22px;border-radius:20px;font-size:12px;font-weight:500;opacity:0;pointer-events:none;transition:all .3s var(--ease);z-index:999}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ---- Tools ---- */
+#tools-header{display:flex;align-items:baseline;justify-content:space-between}
+#tools-header h2{font-size:28px;font-weight:700;letter-spacing:-.6px}
+#tools-header .count{font-size:14px;font-weight:400;color:var(--ink-3);margin-left:8px}
+#tools-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:-6px}
+#tools-search{flex:1;min-width:180px;padding:9px 15px;font-size:13px;font-family:var(--font);color:var(--ink);border:none;border-radius:var(--radius-sm);background:var(--surface);box-shadow:var(--shadow-sm);outline:0;transition:all .2s var(--ease)}
+#tools-search::placeholder{color:var(--ink-3)}
+#tools-search:focus{box-shadow:var(--shadow);background:var(--white)}
+#cat-filters{display:flex;gap:6px;flex-wrap:wrap}
+#cat-filters .cat-pill{padding:6px 13px;font-size:11px;font-weight:500;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink-3);cursor:pointer;font-family:var(--font);transition:all .2s var(--ease);white-space:nowrap}
+#cat-filters .cat-pill:hover{background:var(--hover);color:var(--ink-2)}
+#cat-filters .cat-pill.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+#tools-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:720px){#tools-grid{grid-template-columns:1fr}}
+.tool-card{background:var(--surface);border:none;border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;display:flex;flex-direction:column;gap:10px;transition:all .2s var(--ease);position:relative;cursor:default}
+.tool-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px)}
+.tool-card .tc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.tool-card .tc-name{font-size:14px;font-weight:600;color:var(--ink);letter-spacing:-.1px;word-break:break-word}
+.tool-card .tc-actions{display:flex;gap:2px;flex-shrink:0;opacity:0;transition:opacity .15s var(--ease)}
+.tool-card:hover .tc-actions{opacity:1}
+.tc-actions button{background:0 0;border:none;cursor:pointer;color:var(--ink-3);font-size:14px;padding:3px 5px;border-radius:4px;line-height:1;transition:all .15s var(--ease);font-family:var(--font)}
+.tc-actions button:hover{background:var(--hover);color:var(--ink)}
+.tc-actions button.del:hover{color:#c06050;background:#faf3f2}
+.tool-card .tc-desc{font-size:12px;color:var(--ink-3);line-height:1.6;flex:1}
+.tool-card .tc-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tc-cat.c0{background:#ece7e0;color:#8b7d6e}.tc-cat.c1{background:#f0e8dc;color:#ab8b6a}.tc-cat.c2{background:#e6efe7;color:#6d8e6d}.tc-cat.c3{background:#f2e8dc;color:#b8805a}.tc-cat.c4{background:#ece8f2;color:#867a9e}.tc-cat.c5{background:#e8e6e0;color:#7d7d7d}
+.tool-card .tc-cat{font-size:10px;font-weight:500;padding:2px 9px;border-radius:10px;letter-spacing:.3px}
+.tool-card .tc-url-row{display:flex;align-items:center;gap:6px;min-width:0}
+.tool-card .tc-url{font-size:11px;color:var(--ink-3);font-family:var(--font-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none;transition:color .15s}
+.tool-card .tc-url:hover{color:var(--ink-2)}
+.tool-card .tc-copy{background:0 0;border:none;cursor:pointer;color:var(--ink-3);font-size:12px;padding:2px 5px;border-radius:3px;transition:all .15s var(--ease);flex-shrink:0}
+.tool-card .tc-copy:hover{background:var(--hover);color:var(--ink)}
+.tool-card .tc-copy.copied{color:var(--sage)}
+#tool-form{background:var(--surface);border:2px solid var(--ink);border-radius:var(--radius);box-shadow:var(--shadow-lg);padding:20px 22px;display:flex;flex-direction:column;gap:12px;grid-column:1/-1}
+#tool-form.hidden{display:none}
+#tool-form .tf-row{display:flex;gap:10px}
+#tool-form .tf-row input,#tool-form .tf-row select,#tool-form textarea{font-size:13px;font-family:var(--font);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 13px;outline:0;background:var(--white);transition:border .2s var(--ease)}
+#tool-form .tf-row input:focus,#tool-form .tf-row select:focus,#tool-form textarea:focus{border-color:#c0b8a8}
+#tool-form .tf-name{flex:2}#tool-form .tf-cat{flex:1}#tool-form .tf-url{flex:1}
+#tool-form textarea{width:100%;resize:vertical;min-height:60px;line-height:1.6}
+#tool-form .tf-actions{display:flex;gap:8px;justify-content:flex-end}
+
+@media(max-width:720px){
+  #sidebar{display:none}
+  #content{padding:24px 16px 48px}
+  #date-header h2,#tools-header h2{font-size:22px}
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="server-banner" class="hidden"><span class="sb-dot"></span><span id="sb-text"></span><button id="sb-retry">重试</button></div>
+
+  <aside id="sidebar">
+    <div id="logo"><span class="dot"></span> 工作日志</div>
+    <div id="srv-indicator"><span class="si-dot no" id="si-dot"></span><span id="si-text">离线</span></div>
+    <nav id="side-nav">
+      <button class="active" data-view="log">日志</button>
+      <button data-view="tools">工具</button>
+    </nav>
+
+    <div class="side-panel" id="side-log">
+      <div style="font-size:10px;color:var(--ink-3);margin-bottom:6px;font-weight:500;">项目</div>
+      <div id="proj-filters"><button class="proj-pill active" data-proj="all">全部</button></div>
+      <div id="cal-nav">
+        <button id="cal-prev"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M7.5 2.5L4 6l3.5 3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <span id="cal-label"></span>
+        <button id="cal-next"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M4.5 2.5L8 6l-3.5 3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+      <div id="cal-dow"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+      <div id="cal-grid"></div>
+      <div id="sidebar-divider"></div>
+      <div class="side-stats">
+        <div class="stat"><span>本月记录</span><span class="val" id="stat-days">0天</span></div>
+        <div class="stat"><span>本月时长</span><span class="val" id="stat-hours">0h</span></div>
+        <div class="stat"><span>完成任务</span><span class="val" id="stat-done">0</span></div>
+      </div>
+    </div>
+
+    <div class="side-panel hidden" id="side-tools">
+      <div class="side-stats"><div class="stat"><span>工具总数</span><span class="val" id="tstat-total">0</span></div><div class="stat"><span>本周新增</span><span class="val" id="tstat-weekly">0</span></div></div>
+      <div style="height:1px;background:var(--line);margin:20px 0 16px"></div>
+      <div class="side-stats" id="tstat-cats"></div>
+    </div>
+  </aside>
+
+  <main id="main">
+    <div id="content">
+      <div class="view" id="view-log">
+        <div id="date-header"><div><h2 id="date-title"></h2></div>
+          <div id="header-actions">
+            <button class="btn" id="cc-import-btn" title="从 Claude Code 会话导入">📥 CC</button>
+            <button class="btn" id="ai-summary-btn" title="AI 生成今日总结">🤖 总结</button>
+            <button class="btn" id="weekly-btn" title="生成本周周报">📊 周报</button>
+            <button class="btn" id="today-btn">今天</button>
+            <button class="btn" id="export-btn"><svg width="13" height="13" viewBox="0 0 13 13"><path d="M6.5 1.5v7M4 5.5l2.5-2.5L9 5.5M2.5 9v1.5a1 1 0 001 1h6a1 1 0 001-1V9" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>导出</button>
+          </div>
+        </div>
+        <div id="week-strip"></div>
+        <div class="section">
+          <div class="section-head">任务<span class="badge" id="task-progress"></span></div>
+          <div id="task-input-row">
+            <input id="task-input" type="text" placeholder="添加任务... (修bug 2h ✓ 项目名)" autocomplete="off" maxlength="500">
+            <input id="task-proj" type="text" placeholder="项目" list="proj-list" autocomplete="off">
+            <datalist id="proj-list"></datalist>
+            <button id="add-task-btn">添加</button>
+          </div>
+          <ul id="task-list"></ul>
+        </div>
+        <div class="section"><div class="section-head">笔记</div><textarea id="notes-area" placeholder="写点什么... (⌘S 保存)"></textarea></div>
+        <div id="daily-summary"><div class="sum-item">⏱ <span class="sum-val" id="sum-total">—</span> 时长</div><div class="sum-item">✓ <span class="sum-val" id="sum-done">0</span> 完成</div><div class="sum-item">○ <span class="sum-val" id="sum-pending">0</span> 进行</div></div>
+        <div id="ai-summary-result" style="display:none"></div>
+      </div>
+
+      <div class="view hidden" id="view-tools">
+        <div id="tools-header"><div><h2>工具箱<span class="count" id="tools-count"></span></h2></div><button class="btn primary" id="show-add-form">+ 添加</button></div>
+        <div id="tools-bar"><input id="tools-search" type="text" placeholder="搜索..." autocomplete="off"><div id="cat-filters"><button class="cat-pill active" data-cat="all">全部</button><button class="cat-pill" data-cat="0">开发</button><button class="cat-pill" data-cat="1">写作</button><button class="cat-pill" data-cat="2">研究</button><button class="cat-pill" data-cat="3">效率</button><button class="cat-pill" data-cat="4">服务器</button><button class="cat-pill" data-cat="5">其他</button></div></div>
+        <div id="tool-form" class="hidden"><div class="tf-row"><input class="tf-name" id="tf-name" type="text" placeholder="工具名称" maxlength="100"><select class="tf-cat" id="tf-cat"><option value="0">开发</option><option value="1">写作</option><option value="2">研究</option><option value="3">效率</option><option value="4">服务器</option><option value="5">其他</option></select></div><div class="tf-row"><input class="tf-url" id="tf-url" type="text" placeholder="链接或命令"></div><textarea id="tf-desc" placeholder="描述"></textarea><div class="tf-actions"><button class="btn" id="tf-cancel">取消</button><button class="btn primary" id="tf-save">保存</button></div></div>
+        <div id="tools-grid"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ============================================================
+//  Work Log v7 — JS (unchanged from v6)
+// ============================================================
+const SERVER='http://127.0.0.1:19878', CAT_NAMES=['开发','写作','研究','效率','服务器','其他'];
+const LS_LOG='wl-v7-log', LS_TOOLS='wl-v7-tools';
+
+let currentView='log', currentDate=todayStr(), logData={}, toolsData=[], serverOnline=false;
+let projFilter='all';
+
+function todayStr(){return fmtDate(new Date())}
+function fmtDate(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function parseDate(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)}
+function escHtml(s){const m={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};return s.replace(/[&<>"']/g,c=>m[c])}
+function fmtDuration(sec){if(sec<=0)return'—';const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);return h>0?`${h}h ${m}m`:`${m}m`}
+function fmtDurationLong(sec){if(sec<=0)return'0 分钟';const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);return[h>0?`${h} 小时`:'',m>0?`${m} 分钟`:''].filter(Boolean).join(' ')||'0 分钟'}
+
+async function srv(path,opts={}){
+  try{const r=await fetch(`${SERVER}${path}`,{signal:AbortSignal.timeout(opts.timeout||10000),...opts});if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||r.statusText)}return await r.json()}
+  catch(e){if(!opts.silent)console.warn('Server:',e.message);throw e}
+}
+async function checkServer(){try{await srv('/ping',{timeout:2000,silent:true});serverOnline=true;updateServerUI(true);return true}catch{serverOnline=false;updateServerUI(false);return false}}
+function updateServerUI(online){const b=document.getElementById('server-banner'),d=document.getElementById('si-dot'),t=document.getElementById('si-text');if(online){d.className='si-dot ok';t.textContent='已连接';b.className='online hidden'}else{d.className='si-dot no';t.textContent='离线';b.className='offline';b.classList.remove('hidden');document.getElementById('sb-text').textContent='服务器未运行'}}
+
+function packData(){return{version:2,updatedAt:new Date().toISOString(),log:logData,tools:toolsData}}
+function unpackData(json){logData=json.log||{};toolsData=json.tools||[]}
+function saveLS(){try{localStorage.setItem(LS_LOG,JSON.stringify(logData));localStorage.setItem(LS_TOOLS,JSON.stringify(toolsData))}catch{}}
+function loadLS(){try{logData=JSON.parse(localStorage.getItem(LS_LOG))||{};toolsData=JSON.parse(localStorage.getItem(LS_TOOLS))||[]}catch{logData={};toolsData=[]}}
+let saveDb=null;
+function afterChange(){saveLS();if(serverOnline){clearTimeout(saveDb);saveDb=setTimeout(()=>srv('/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(packData())}).catch(()=>{}),800)}}
+function saveNow(){clearTimeout(saveDb);if(serverOnline)srv('/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(packData())}).catch(()=>{});saveLS()}
+
+function getDay(d){if(!logData[d])logData[d]={tasks:[],notes:''};return logData[d]}
+
+function addTask(text,proj){proj=proj||'';const t={id:Date.now(),text:text.trim(),done:false,seconds:0,running:false,startedAt:null,project:proj};getDay(currentDate).tasks.push(t);afterChange()}
+function toggleTask(id){const t=getDay(currentDate).tasks.find(x=>x.id===id);if(!t)return;if(t.running)stopTimerObj(t);t.done=!t.done;afterChange()}
+function deleteTask(id){const day=getDay(currentDate);const t=day.tasks.find(x=>x.id===id);if(t&&t.running)stopTimerObj(t);day.tasks=day.tasks.filter(x=>x.id!==id);afterChange()}
+function stopAllExcept(eid){for(const t of getDay(currentDate).tasks){if(t.running&&t.id!==eid)stopTimerObj(t)}}
+function stopTimerObj(t){if(!t.running||!t.startedAt)return;t.seconds+=Math.max(0,Math.floor((Date.now()-new Date(t.startedAt).getTime())/1000));t.running=false;t.startedAt=null}
+function startTimerObj(t){stopAllExcept(t.id);t.running=true;t.startedAt=new Date().toISOString()}
+function toggleTimer(id){const t=getDay(currentDate).tasks.find(x=>x.id===id);if(!t)return;t.running?stopTimerObj(t):startTimerObj(t);afterChange()}
+function reconcileTimers(){let c=false;for(const t of getDay(currentDate).tasks){if(t.running&&t.startedAt){t.seconds+=Math.max(0,Math.floor((Date.now()-new Date(t.startedAt).getTime())/1000));t.startedAt=new Date().toISOString();c=true}}if(c)afterChange()}
+function setNotes(text){getDay(currentDate).notes=text;afterChange()}
+
+function getProjects(){const s=new Set();for(const day of Object.values(logData)){for(const t of day.tasks||[]){if(t.project)s.add(t.project)}}return[...s].sort()}
+function getProjColor(proj){let h=0;for(let i=0;i<proj.length;i++)h=((h<<5)-h)+proj.charCodeAt(i);return Math.abs(h)%6}
+
+function addTool(tool){toolsData.unshift(tool);afterChange()}
+function updateTool(id,u){const i=toolsData.findIndex(t=>t.id===id);if(i===-1)return;toolsData[i]={...toolsData[i],...u};afterChange()}
+function deleteTool(id){toolsData=toolsData.filter(t=>t.id!==id);afterChange()}
+
+async function parseTaskNL(text){
+  let done=false,seconds=0,clean=text,proj=null;
+  if(/[✓√✅]/.test(text)||/(done|完成|搞完|做完了)/i.test(text)){done=true;clean=clean.replace(/[✓√✅]|(done|完成|搞完|做完了)/gi,'').trim()}
+  const durMatch=clean.match(/(\d+)\s*[h小时]?\s*(\d+)\s*[m分钟]?/)||clean.match(/(\d+)\s*[h小时]/)||clean.match(/(\d+)\s*[m分钟]/);
+  if(durMatch){if(durMatch[2]!==undefined)seconds=parseInt(durMatch[1])*3600+parseInt(durMatch[2])*60;else if(/[h小时]/.test(durMatch[0]))seconds=parseInt(durMatch[1])*3600;else seconds=parseInt(durMatch[1])*60;clean=clean.replace(durMatch[0],'').trim()}
+  if(clean.length>40&&serverOnline){try{const r=await srv('/parse-task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text}),timeout:8000});if(r){done=r.done||done;seconds=r.seconds||seconds;clean=r.text||clean;proj=r.project||proj}}catch{}}
+  return{text:clean||text,done,seconds,project:proj};
+}
+
+function switchView(v){if(currentView===v)return;if(currentView==='log')reconcileTimers();currentView=v;document.querySelectorAll('#side-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));document.getElementById('side-log').classList.toggle('hidden',v!=='log');document.getElementById('side-tools').classList.toggle('hidden',v!=='tools');document.getElementById('view-log').classList.toggle('hidden',v!=='log');document.getElementById('view-tools').classList.toggle('hidden',v!=='tools');renderCurrentView()}
+function renderCurrentView(){if(currentView==='log')renderAllLog();else renderAllTools()}
+
+let calYear,calMonth;function syncCal(){const d=parseDate(currentDate);calYear=d.getFullYear();calMonth=d.getMonth()}syncCal();
+
+function renderCalendar(){const mNames='一月 二月 三月 四月 五月 六月 七月 八月 九月 十月 十一月 十二月'.split(' ');document.getElementById('cal-label').textContent=`${calYear}年 ${mNames[calMonth]}`;const grid=document.getElementById('cal-grid'),fd=new Date(calYear,calMonth,1).getDay(),td=new Date(calYear,calMonth+1,0).getDate(),today=todayStr();let h='';for(let i=0;i<fd;i++)h+='<span class="day"></span>';for(let d=1;d<=td;d++){const ds=fmtDate(new Date(calYear,calMonth,d));let c='day';if(ds===today)c+=' today';if(ds===currentDate)c+=' active';if(logData[ds]&&(logData[ds].tasks.length||logData[ds].notes.trim()))c+=' has-data';h+=`<span class="${c}" data-date="${ds}">${d}</span>`}grid.innerHTML=h;grid.querySelectorAll('.day[data-date]').forEach(el=>{el.addEventListener('click',()=>{const ds=el.dataset.date;if(ds!==currentDate)navigateTo(ds)})})}
+function renderWeekStrip(){const d=parseDate(currentDate),dow=d.getDay(),mon=new Date(d);mon.setDate(d.getDate()-(dow===0?6:dow-1));const labels='一 二 三 四 五 六 日'.split(' ');let h='';for(let i=0;i<7;i++){const day=new Date(mon);day.setDate(mon.getDate()+i);const ds=fmtDate(day),cls=(ds===currentDate)?'wd-item current':'wd-item';h+=`<div class="${cls}" data-date="${ds}"><span class="wd-label">${labels[i]}</span><span class="wd-num">${day.getDate()}</span></div>`}const s=document.getElementById('week-strip');s.innerHTML=h;s.querySelectorAll('.wd-item').forEach(el=>{el.addEventListener('click',()=>{const ds=el.dataset.date;if(ds!==currentDate)navigateTo(ds)})})}
+function renderProjFilters(){const projects=getProjects();const container=document.getElementById('proj-filters');if(!projects.length){container.innerHTML='<button class="proj-pill active" data-proj="all">全部</button>';return}let h='<button class="proj-pill active" data-proj="all">全部</button>';for(const p of projects){const c=getProjColor(p);h+=`<button class="proj-pill" data-proj="${escHtml(p)}">${escHtml(p)}</button>`}container.innerHTML=h;container.querySelectorAll('.proj-pill').forEach(pill=>{pill.addEventListener('click',()=>{container.querySelectorAll('.proj-pill').forEach(p=>p.classList.remove('active'));pill.classList.add('active');projFilter=pill.dataset.proj;renderTasks()})})}
+function renderTasks(){const day=getDay(currentDate),list=document.getElementById('task-list'),badge=document.getElementById('task-progress');let tasks=day.tasks;if(projFilter!=='all')tasks=tasks.filter(t=>(t.project||'')===projFilter);const total=tasks.length,done=tasks.filter(t=>t.done).length;badge.textContent=total?`${done}/${total}`:'';if(!day.tasks.length){list.innerHTML='<div class="empty-state"><div class="icon">—</div>暂无任务<br>支持自然语言: 修bug 2h ✓ 项目名</div>';return}if(!tasks.length&&projFilter!=='all'){list.innerHTML='<div class="empty-state"><div class="icon">—</div>该项目下无任务</div>';return}list.innerHTML=tasks.map(t=>{let sec=t.seconds;if(t.running&&t.startedAt)sec+=Math.max(0,Math.floor((Date.now()-new Date(t.startedAt).getTime())/1000));const pc=getProjColor(t.project||'');return`<li class="${t.done?'done':''}" data-id="${t.id}"><div class="check" data-action="toggle"></div><span class="task-text">${escHtml(t.text)}</span>${t.project?`<span class="task-proj-tag c${pc}">${escHtml(t.project)}</span>`:''}<div class="task-timer"><span class="task-time-val">${sec>0?fmtDuration(sec):''}</span><span class="timer-dot${t.running?' running':''}" data-action="timer" title="${t.running?'停止':'开始'}"></span></div><button class="task-del" data-action="delete" title="删除">×</button></li>`}).join('');list.querySelectorAll('[data-action]').forEach(el=>{el.addEventListener('click',e=>{e.stopPropagation();const id=Number(el.closest('li').dataset.id),a=el.dataset.action;if(a==='toggle')toggleTask(id);else if(a==='timer')toggleTimer(id);else if(a==='delete'){if(confirm('删除？'))deleteTask(id)}renderAllLog()})})}
+function renderNotes(){document.getElementById('notes-area').value=getDay(currentDate).notes||''}
+function renderDailySummary(){const day=getDay(currentDate);let ts=0;for(const t of day.tasks){let s=t.seconds;if(t.running&&t.startedAt)s+=Math.max(0,Math.floor((Date.now()-new Date(t.startedAt).getTime())/1000));ts+=s}document.getElementById('sum-total').textContent=fmtDuration(ts);document.getElementById('sum-done').textContent=day.tasks.filter(t=>t.done).length;document.getElementById('sum-pending').textContent=day.tasks.filter(t=>!t.done).length}
+function renderSidebarStats(){const now=new Date(),y=now.getFullYear(),m=now.getMonth();let days=0,sec=0,done=0;for(const[k,day] of Object.entries(logData)){const d=parseDate(k);if(d.getFullYear()===y&&d.getMonth()===m){if(day.tasks.length||(day.notes&&day.notes.trim()))days++;for(const t of day.tasks){sec+=t.seconds||0;if(t.done)done++}}}document.getElementById('stat-days').textContent=`${days}天`;document.getElementById('stat-hours').textContent=fmtDuration(sec);document.getElementById('stat-done').textContent=done}
+function renderDateHeader(){const d=parseDate(currentDate),w=['日','一','二','三','四','五','六'][d.getDay()];document.getElementById('date-title').innerHTML=`${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日<span class="wd">星期${w}</span>`}
+function renderAllLog(){reconcileTimers();renderDateHeader();renderWeekStrip();renderProjFilters();renderTasks();renderNotes();renderDailySummary();renderCalendar();renderSidebarStats();startTick()}
+function navigateTo(ds){reconcileTimers();currentDate=ds;syncCal();afterChange();renderAllLog()}
+
+let tick=null;function startTick(){clearInterval(tick);tick=setInterval(()=>{const day=logData[currentDate];if(day&&day.tasks.some(t=>t.running)){renderTasks();renderDailySummary()}},15000)}
+
+async function generateAISummary(){if(!serverOnline){toast('服务器未连接');return}const resultDiv=document.getElementById('ai-summary-result');resultDiv.style.display='block';resultDiv.textContent='🤖 正在生成 AI 总结...';try{const r=await srv(`/generate-summary/${currentDate}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({save:true}),timeout:60000});resultDiv.textContent=r.summary;toast('已生成并保存');const state=await srv('/state');unpackData(state);saveLS();renderNotes()}catch(e){resultDiv.textContent='❌ 生成失败: '+e.message}}
+async function generateWeeklyReport(){if(!serverOnline){toast('服务器未连接');return}const resultDiv=document.getElementById('ai-summary-result');resultDiv.style.display='block';resultDiv.textContent='📊 正在生成周报...';try{const r=await srv('/weekly-report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:currentDate,save:true}),timeout:90000});resultDiv.textContent=r.report;toast('周报已生成');const state=await srv('/state');unpackData(state);saveLS();renderNotes()}catch(e){resultDiv.textContent='❌ 失败: '+e.message}}
+async function importCCSession(){if(!serverOnline){toast('服务器未连接');return}const resultDiv=document.getElementById('ai-summary-result');resultDiv.style.display='block';resultDiv.textContent='📥 正在分析 Claude Code 会话...';try{const r=await srv('/cc-import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({limit:3}),timeout:60000});if(r.imported>0){toast(`从 CC 导入了 ${r.imported} 条任务`)}else{resultDiv.textContent='未检测到新的 CC 会话内容'}const state=await srv('/state');unpackData(state);saveLS();renderAllLog()}catch(e){resultDiv.textContent='❌ 失败: '+e.message}}
+
+function exportMarkdown(){const day=getDay(currentDate),d=parseDate(currentDate),w=['日','一','二','三','四','五','六'][d.getDay()];let md=`# ${currentDate} 星期${w}\n\n## 任务\n\n`;if(!day.tasks.length)md+='(无)\n\n';else{for(const t of day.tasks){md+=`- ${t.done?'[x]':'[ ]'} ${t.text}`;if(t.project)md+=` _${t.project}_`;if(t.seconds>0)md+=` (${fmtDurationLong(t.seconds)})`;md+='\n'}md+='\n'}md+=`## 笔记\n\n${day.notes||'(无)'}\n`;return md}
+function doExport(){const md=exportMarkdown();const b=new Blob([md],{type:'text/markdown;charset=utf-8'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`work-log-${currentDate}.md`;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);toast('已导出')}
+
+let toolsSearch='',toolsFilterCat='all';
+function getFilteredTools(){let list=[...toolsData];if(toolsFilterCat!=='all')list=list.filter(t=>String(t.cat)===toolsFilterCat);if(toolsSearch.trim()){const q=toolsSearch.trim().toLowerCase();list=list.filter(t=>t.name.toLowerCase().includes(q)||(t.desc||'').toLowerCase().includes(q)||(t.url||'').toLowerCase().includes(q))}return list}
+function renderAllTools(){renderToolsSidebarStats();renderToolsGrid()}
+function renderToolsSidebarStats(){const total=toolsData.length,weekAgo=Date.now()-7*24*3600*1000,weekly=toolsData.filter(t=>(t.createdAt||0)>weekAgo).length;document.getElementById('tstat-total').textContent=total;document.getElementById('tstat-weekly').textContent=weekly;const counts={};for(const t of toolsData){const c=CAT_NAMES[t.cat]||'其他';counts[c]=(counts[c]||0)+1}document.getElementById('tstat-cats').innerHTML=Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="stat"><span>${k}</span><span class="val">${v}</span></div>`).join('')||'<div class="stat"><span>暂无</span><span class="val">—</span></div>'}
+function renderToolsGrid(){const grid=document.getElementById('tools-grid'),count=document.getElementById('tools-count'),filtered=getFilteredTools();count.textContent=toolsData.length?`${filtered.length}/${toolsData.length}`:'';if(!toolsData.length&&!editingToolId){grid.innerHTML='<div class="empty-state"><div class="icon">🔧</div>还没有工具</div>';return}if(!filtered.length){grid.innerHTML='<div class="empty-state"><div class="icon">—</div>无匹配</div>';return}grid.innerHTML=filtered.map(t=>{const ud=t.url?t.url.replace(/^https?:\/\//,''):'';return`<div class="tool-card" data-id="${t.id}"><div class="tc-top"><span class="tc-name">${escHtml(t.name)}</span><span class="tc-actions"><button data-action="edit-tool" title="编辑">✎</button><button class="del" data-action="delete-tool" title="删除">×</button></span></div>${t.desc?`<div class="tc-desc">${escHtml(t.desc)}</div>`:''}<div class="tc-bottom"><span class="tc-cat c${t.cat}">${CAT_NAMES[t.cat]||'其他'}</span>${t.url?`<div class="tc-url-row"><a class="tc-url" href="${escHtml(t.url)}" target="_blank" rel="noopener">${escHtml(ud)}</a><button class="tc-copy" data-action="copy-url" data-url="${escHtml(t.url)}">📋</button></div>`:'<span></span>'}</div></div>`}).join('');grid.querySelectorAll('[data-action]').forEach(el=>{el.addEventListener('click',e=>{e.stopPropagation();const card=el.closest('.tool-card'),id=Number(card.dataset.id),a=el.dataset.action;if(a==='edit-tool')startEditTool(id);else if(a==='delete-tool'){if(confirm('删除？')){deleteTool(id);renderAllTools()}}else if(a==='copy-url'){copyUrl(el.dataset.url,el)}})});}
+function copyUrl(url,btn){navigator.clipboard.writeText(url).then(()=>{btn.classList.add('copied');btn.textContent='✓';setTimeout(()=>{btn.classList.remove('copied');btn.textContent='📋'},1500)}).catch(()=>toast('复制失败'))}
+let editingToolId=null;
+function showAddForm(){editingToolId=null;const f=document.getElementById('tool-form');f.classList.remove('hidden');document.getElementById('tf-name').value='';document.getElementById('tf-cat').value='0';document.getElementById('tf-url').value='';document.getElementById('tf-desc').value='';document.getElementById('tf-name').focus()}
+function hideForm(){editingToolId=null;document.getElementById('tool-form').classList.add('hidden')}
+function startEditTool(id){const t=toolsData.find(x=>x.id===id);if(!t)return;editingToolId=id;const f=document.getElementById('tool-form');f.classList.remove('hidden');document.getElementById('tf-name').value=t.name;document.getElementById('tf-cat').value=String(t.cat);document.getElementById('tf-url').value=t.url||'';document.getElementById('tf-desc').value=t.desc||'';document.getElementById('tf-name').focus();f.scrollIntoView({behavior:'smooth',block:'center'})}
+function saveToolForm(){const name=document.getElementById('tf-name').value.trim();if(!name){toast('请输入名称');return}const cat=parseInt(document.getElementById('tf-cat').value),url=document.getElementById('tf-url').value.trim(),desc=document.getElementById('tf-desc').value.trim();if(editingToolId){updateTool(editingToolId,{name,cat,url,desc});toast('已更新')}else{addTool({id:Date.now(),name,cat,url,desc,createdAt:Date.now()});toast('已添加')}hideForm();renderAllTools()}
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(el._tid);el._tid=setTimeout(()=>el.classList.remove('show'),1800)}
+
+async function initApp(){const online=await checkServer();if(online){try{const state=await srv('/state');unpackData(state);saveLS()}catch{loadLS()}}else{loadLS()}syncCal();renderCurrentView();setInterval(async()=>{const was=serverOnline;await checkServer();if(!was&&serverOnline){toast('已连接');saveNow()}},30000)}
+
+document.querySelectorAll('#side-nav button').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)));
+document.getElementById('add-task-btn').addEventListener('click',async()=>{const inp=document.getElementById('task-input'),proj=document.getElementById('task-proj').value.trim();const raw=inp.value.trim();if(!raw)return;const parsed=await parseTaskNL(raw);addTask(parsed.text,parsed.project||proj);inp.value='';document.getElementById('task-proj').value='';inp.focus();renderAllLog()});
+document.getElementById('task-input').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('add-task-btn').click()});
+document.getElementById('task-proj').addEventListener('focus',()=>{const dl=document.getElementById('proj-list');dl.innerHTML=getProjects().map(p=>`<option value="${escHtml(p)}">`).join('')});
+let notesTimer=null;document.getElementById('notes-area').addEventListener('input',e=>{setNotes(e.target.value);clearTimeout(notesTimer);notesTimer=setTimeout(renderSidebarStats,2000)});
+document.getElementById('cal-prev').addEventListener('click',()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--}renderCalendar()});
+document.getElementById('cal-next').addEventListener('click',()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++}renderCalendar()});
+document.getElementById('today-btn').addEventListener('click',()=>navigateTo(todayStr()));
+document.getElementById('export-btn').addEventListener('click',doExport);
+document.getElementById('ai-summary-btn').addEventListener('click',generateAISummary);
+document.getElementById('weekly-btn').addEventListener('click',generateWeeklyReport);
+document.getElementById('cc-import-btn').addEventListener('click',importCCSession);
+document.getElementById('show-add-form').addEventListener('click',showAddForm);
+document.getElementById('tf-cancel').addEventListener('click',hideForm);
+document.getElementById('tf-save').addEventListener('click',saveToolForm);
+document.getElementById('tf-name').addEventListener('keydown',e=>{if(e.key==='Enter')saveToolForm()});
+document.getElementById('tools-search').addEventListener('input',e=>{toolsSearch=e.target.value;renderToolsGrid()});
+document.querySelectorAll('#cat-filters .cat-pill').forEach(p=>{p.addEventListener('click',()=>{document.querySelectorAll('#cat-filters .cat-pill').forEach(x=>x.classList.remove('active'));p.classList.add('active');toolsFilterCat=p.dataset.cat;renderToolsGrid()})});
+document.getElementById('sb-retry').addEventListener('click',()=>checkServer().then(ok=>{if(ok){srv('/state').then(s=>{unpackData(s);saveLS();renderCurrentView()}).catch(()=>{})}}));
+
+document.addEventListener('keydown',e=>{const mod=e.metaKey||e.ctrlKey;if(mod&&e.key==='s'){e.preventDefault();saveNow();toast('已保存')}if(mod&&e.key==='e'){e.preventDefault();if(currentView==='log')doExport()}if(mod&&e.key==='ArrowLeft'){e.preventDefault();if(currentView==='log'){const d=parseDate(currentDate);d.setDate(d.getDate()-1);navigateTo(fmtDate(d))}}if(mod&&e.key==='ArrowRight'){e.preventDefault();if(currentView==='log'){const d=parseDate(currentDate);d.setDate(d.getDate()+1);navigateTo(fmtDate(d))}}if(mod&&e.key==='1'){e.preventDefault();switchView('log')}if(mod&&e.key==='2'){e.preventDefault();switchView('tools')}if(mod&&e.key==='i'){e.preventDefault();generateAISummary()}});
+window.addEventListener('beforeunload',()=>{saveLS()});
+initApp();
+</script>
+</body>
+</html>
