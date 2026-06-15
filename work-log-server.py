@@ -37,12 +37,21 @@ if _ENV_FILE.exists():
                 _k, _v = _line.split('=', 1)
                 os.environ.setdefault(_k.strip(), _v.strip())
 
-# ---- Config ----
-DATA_FILE = Path(os.environ.get("WORK_LOG_FILE",
-    os.path.expanduser("~/Desktop/Research/work-log-data.json"))).resolve()
+# ---- Config (portable: 默认基于脚本位置, 环境变量可覆盖) ----
+SCRIPT_DIR = Path(__file__).resolve().parent
+
+# 数据文件: 默认放脚本同目录
+DATA_FILE = Path(os.environ.get("WORK_LOG_FILE", str(SCRIPT_DIR / "work-log-data.json"))).resolve()
 PORT = int(os.environ.get("WORK_LOG_PORT", 19878))
-RESEARCH_DIR = Path(os.path.expanduser("~/Desktop/Research"))
-CC_SESSIONS_DIR = Path(os.path.expanduser("~/.claude/projects/-Users-mingfeilu-Desktop-Research"))
+
+# 扫描 git 提交的目录: 默认脚本所在目录, 可用 WORK_LOG_REPOS_DIR 指向你的项目根目录
+RESEARCH_DIR = Path(os.path.expanduser(os.environ.get("WORK_LOG_REPOS_DIR", str(SCRIPT_DIR))))
+
+# Claude Code 会话记录目录: 默认按 RESEARCH_DIR 自动推导 (~/.claude/projects/<路径转-连字符>)
+def _default_cc_dir():
+    sanitized = str(RESEARCH_DIR).replace('/', '-')
+    return os.path.expanduser(f"~/.claude/projects/{sanitized}")
+CC_SESSIONS_DIR = Path(os.path.expanduser(os.environ.get("WORK_LOG_CC_DIR", _default_cc_dir())))
 
 # AI config
 AI_KEY  = os.environ.get("DEEPSEEK_API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("WORK_LOG_AI_KEY", "")
@@ -82,6 +91,28 @@ def save_state(data):
                 os.unlink(tmp_path); raise
         except Exception as e:
             print(f"[server] Write error: {e}", file=sys.stderr); raise
+
+
+# ============================================================
+#  Notes: managed AI blocks (upsert — replace same kind, keep rest)
+# ============================================================
+import re as _re
+
+# 所有 AI 生成块以 "### 🤖 {kind} (时间)" 标记; 同 kind 覆盖, 其余保留
+AI_BLOCK_KINDS = ["AI 总结", "CC 会话总结", "周报", "本周周报", "自动总结"]
+
+def write_ai_block(notes, kind, content):
+    """删除 notes 中所有同 kind 的 🤖 块, 再在末尾追加新块。保留用户笔记 + 其他 kind 的块。"""
+    notes = notes or ""
+    ts = datetime.now().strftime('%H:%M')
+    # 匹配 "### 🤖 {kind}..." 到下一个 "### 🤖 " 或文末 (DOTALL)
+    pattern = _re.compile(
+        r'\n*### 🤖 ' + _re.escape(kind) + r'\b.*?(?=\n### 🤖 |\Z)',
+        _re.S
+    )
+    cleaned = pattern.sub('', notes).rstrip()
+    block = f"### 🤖 {kind} ({ts})\n{content}"
+    return (cleaned + "\n\n" + block).strip() if cleaned else block
 
 
 # ============================================================
@@ -249,6 +280,7 @@ def generate_ai_summary(date_str, save_to_notes=True):
     tasks = day.get('tasks', [])
     notes = day.get('notes', '')
 
+    # 喂给 LLM 的笔记: 去掉所有 AI 块, 只保留用户手写内容
     clean_notes = notes.split('### 🤖')[0].strip() if '### 🤖' in notes else notes
     done = [t for t in tasks if t.get('done')]
     pending = [t for t in tasks if not t.get('done')]
@@ -284,35 +316,39 @@ def generate_ai_summary(date_str, save_to_notes=True):
             diff_lines = all_diffs[repo].split('\n')[:5]
             for dl in diff_lines: git_lines.append(f"     Δ {dl.strip()}")
 
-    prompt = f"""你是一个简洁的工作日志助手。根据以下今日工作数据，用中文生成 3-5 条要点总结。
+    # 综合总结: 把 Claude Code 对话记录也作为输入源 (含技术细节/决策背景)
+    cc_text = extract_cc_session_text(limit=3, date_str=date_str) or extract_cc_session_text(limit=2)
+    cc_block = cc_text[:2500] if cc_text else "(无对话记录)"
+
+    prompt = f"""你是一个简洁的工作日志助手。综合以下三类数据 — 任务、Git、Claude Code 对话 — 生成一份统一的中文总结 (4-6 条要点)。
 
 日期: {date_str} 星期{wd}
 总耗时: {h}小时{m}分钟
 
-任务 ({len(done)}/{len(tasks)} 完成):
+【任务】({len(done)}/{len(tasks)} 完成):
 {chr(10).join(task_lines) if task_lines else '  (无任务)'}
 
-Git ({sum(len(v) for v in all_commits.values())} commits):
+【Git】({sum(len(v) for v in all_commits.values())} commits):
 {chr(10).join(git_lines) if git_lines else '  (无提交)'}
 
-笔记: {clean_notes[:300] if clean_notes else '(无笔记)'}
+【Claude Code 对话记录】(用于补充技术细节和决策背景):
+{cc_block}
+
+【用户笔记】: {clean_notes[:300] if clean_notes else '(无笔记)'}
 
 规则:
-- 3-5 条中文要点，每条不超过 2 行
-- 优先总结完成的事项，再提及进行中的
-- 把 git commit 和对应的任务自然关联起来
-- 如果有 git diff 信息，提及改了哪些文件
-- 语调: 客观、简洁、不啰嗦
-- 不要用 "今天" 开头，直接动词开头"""
+- 4-6 条中文要点，每条不超过 2 行
+- 融合三类数据: 任务/git 提供"做了什么和量化数据", 对话记录补充"为什么做、技术细节"
+- 量化信息优先用任务和 git 的真实数据 (时长、commit、文件名)
+- 同一件事不要重复成多条
+- 语调: 客观、简洁、不啰嗦, 直接动词开头, 不要用"今天"开头"""
 
-    summary = call_llm("你是工作日志助手。输出只有要点，无问候语。", prompt, max_tokens=500)
+    summary = call_llm("你是工作日志助手。输出只有要点，无问候语客套。", prompt, max_tokens=600)
     if not summary:
         return {"error": "LLM 调用失败"}
 
     if save_to_notes and summary:
-        ts = datetime.now().strftime('%H:%M')
-        block = f"\n\n### 🤖 AI 总结 ({ts})\n{summary}"
-        day['notes'] = (clean_notes + block)
+        day['notes'] = write_ai_block(day.get('notes', ''), "AI 总结", summary)
         save_state(state)
 
     return {"date": date_str, "summary": summary, "saved": save_to_notes, "model": AI_MODEL}
@@ -399,15 +435,18 @@ def generate_weekly_report(end_date_str=None):
 项目时间分配:
 {proj_text if proj_text else '(无)'}
 
-格式要求:
-1. 本周概览 (1-2 句话)
-2. 分项目总结 (每个项目 1-2 条要点，含进度)
-3. 关键 Git 提交 (选最重要的 3-5 个)
-4. 下周建议 (2-3 条)
-用 Markdown 格式。"""
+格式要求 (用 Markdown):
+- 标题层级最多用到 ### (三级), 不要用 #### 四级标题
+- 四个部分用 ## 二级标题: ## 本周概览 / ## 分项目总结 / ## 关键 Git 提交 / ## 下周建议
+- 列表用 - , 不要用缩进嵌套列表
+- 直接输出周报内容, 不要任何前言/客套话/结束语 (如"好的"、"以下是")"""
 
-    report = call_llm("你是周报助手。输出结构化 Markdown 周报。", prompt, max_tokens=1200)
+    report = call_llm("你是周报助手。直接输出 Markdown 周报正文, 第一个字符就是 ## 标题, 禁止任何前言客套。", prompt, max_tokens=1200)
     if not report: return {"error": "LLM 调用失败"}
+    # 安全网: 剥掉开头的客套话, 从第一个 markdown 标题/分隔线开始
+    _m = _re.search(r'^(#{1,6}\s|\*\*|---|\d+\.\s|[-*]\s)', report, _re.M)
+    if _m and _m.start() > 0:
+        report = report[_m.start():].strip()
 
     return {
         "week": f"{week_dates[0]} ~ {week_dates[-1]}",
@@ -420,20 +459,21 @@ def generate_weekly_report(end_date_str=None):
 # ============================================================
 #  Claude Code session analysis
 # ============================================================
-def analyze_cc_session(limit=3):
-    """Read recent Claude Code session transcripts, extract work summary."""
+def extract_cc_session_text(limit=3, date_str=None):
+    """读取最近的 Claude Code 会话 transcript, 返回对话摘录字符串 (不调用 LLM)。
+    date_str 给定时, 只取该天修改过的会话文件。"""
     if not CC_SESSIONS_DIR.exists():
-        return {"sessions": 0, "summary": "未找到 CC 会话记录目录"}
-
-    # Find recent transcript files (skip symlinks)
-    jsonl_files = sorted(
-        [p for p in CC_SESSIONS_DIR.glob("*.jsonl") if not p.is_symlink()],
-        key=lambda p: p.stat().st_mtime, reverse=True
-    )
-    if not jsonl_files:
-        return {"sessions": 0, "summary": f"目录 {CC_SESSIONS_DIR} 中无会话文件"}
-
-    recent = jsonl_files[:limit]
+        return None
+    files = [p for p in CC_SESSIONS_DIR.glob("*.jsonl") if not p.is_symlink()]
+    if date_str:
+        try:
+            d0 = datetime.strptime(date_str, '%Y-%m-%d').date()
+            files = [p for p in files if datetime.fromtimestamp(p.stat().st_mtime).date() == d0]
+        except: pass
+    files = sorted(files, key=lambda p: p.stat().st_mtime, reverse=True)
+    if not files:
+        return None
+    recent = files[:limit]
     sessions_text = []
     for f in recent:
         try:
@@ -443,45 +483,30 @@ def analyze_cc_session(limit=3):
                     try:
                         entry = json.loads(line)
                         etype = entry.get('type', '')
-
-                        # User messages — the actual prompts/questions
                         if etype == 'user':
                             msg = entry.get('message', {})
                             content = msg.get('content', '')
-                            # content can be string or array
                             if isinstance(content, list):
                                 texts = []
                                 for block in content:
                                     if isinstance(block, dict):
-                                        if block.get('type') == 'tool_result':
-                                            # Skip tool outputs, too verbose
-                                            pass
-                                        else:
+                                        if block.get('type') != 'tool_result':
                                             texts.append(str(block.get('text', block.get('content', ''))))
                                     else:
                                         texts.append(str(block))
                                 content = ' '.join(texts)
                             if isinstance(content, str) and len(content) > 10:
                                 lines.append(f"  user: {content[:200]}")
-
-                        # Assistant messages — extract text + tool calls
                         elif etype == 'assistant':
-                            msg = entry.get('message', {})
-                            content_blocks = msg.get('content', [])
-                            if not isinstance(content_blocks, list):
-                                continue
-                            for block in content_blocks:
-                                if not isinstance(block, dict):
-                                    continue
+                            for block in (entry.get('message', {}).get('content', []) or []):
+                                if not isinstance(block, dict): continue
                                 btype = block.get('type', '')
                                 if btype == 'text':
                                     txt = block.get('text', '')
                                     if txt and len(txt) > 20:
                                         lines.append(f"  assistant: {txt[:200]}")
                                 elif btype == 'tool_use':
-                                    name = block.get('name', '')
-                                    inp = block.get('input', {})
-                                    desc = ''
+                                    name = block.get('name', ''); inp = block.get('input', {}); desc = ''
                                     if name in ('Edit', 'Write'):
                                         desc = inp.get('file_path', '') or inp.get('description', '')
                                     elif name == 'Bash':
@@ -492,31 +517,41 @@ def analyze_cc_session(limit=3):
                                         lines.append(f"  tool[{name}]: {str(desc)[:150]}")
                     except: pass
             if lines:
-                sessions_text.append(f"Session {f.stem[-12:]} ({f.stat().st_mtime}):\n" + '\n'.join(lines[:20]))
+                sessions_text.append(f"Session {f.stem[-12:]}:\n" + '\n'.join(lines[:20]))
         except: pass
-
     if not sessions_text:
-        return {"sessions": len(recent), "summary": "(无法解析会话内容 — 可能需要更多对话记录)"}
+        return None
+    return '\n'.join(sessions_text)[:5000]
 
+
+def analyze_cc_session(limit=3):
+    """读 CC 会话, 用 LLM 提取任务列表 (供 cc-import 自动建任务)。不再产出 notes 块。"""
+    if not CC_SESSIONS_DIR.exists():
+        return {"sessions": 0, "summary": "未找到 CC 会话记录目录"}
+    text = extract_cc_session_text(limit)
+    if not text:
+        return {"sessions": 0, "summary": "(无法解析会话内容 — 可能需要更多对话记录)"}
     if not AI_KEY:
-        return {"sessions": len(recent), "sessions_text": '\n'.join(sessions_text[:5000]),
-                "summary": "(需要 AI key 来生成总结)"}
+        return {"sessions": limit, "sessions_text": text, "summary": "(需要 AI key)"}
 
     prompt = f"""分析以下 Claude Code 会话记录，提取今天做了什么工作:
 
-{sessions_text[:5000]}
+{text}
 
 输出格式 (JSON):
-{{"tasks": [{{"text": "任务描述", "done": true/false, "seconds": 估算秒数(默认0), "project": "项目名或null"}}], "notes": "一段中文总结, 100字以内"}}
+{{"tasks": [{{"text": "任务描述", "done": true/false, "seconds": 估算秒数(默认0), "project": "项目名或null"}}]}}
+要求:
+- 任务描述用稳定、简洁的动宾短语 (如"构建工作日志系统"), 同一件事固定用同一种表述
+- 合并同类工作为一条, 不要拆成多条近似任务
 只返回 JSON，不要解释。"""
-
-    resp = call_llm("你是会话分析器。只返回 JSON。", prompt, max_tokens=600)
+    # temperature=0 → 同一对话每次产出一致文本, 配合去重实现幂等导入
+    resp = call_llm("你是会话分析器。只返回 JSON。", prompt, max_tokens=600, temperature=0)
     if resp:
         try:
-            return {"sessions": len(recent), "parsed": json.loads(resp)}
+            return {"sessions": limit, "parsed": json.loads(resp)}
         except:
-            return {"sessions": len(recent), "raw": resp}
-    return {"sessions": len(recent), "summary": "LLM 调用失败"}
+            return {"sessions": limit, "raw": resp}
+    return {"sessions": limit, "summary": "LLM 调用失败"}
 
 
 # ============================================================
@@ -640,8 +675,7 @@ class WorkLogHandler(BaseHTTPRequestHandler):
                 if body.get('mode') == 'replace':
                     day['notes'] = body['text']
                 else:
-                    ts = datetime.now().strftime('%H:%M')
-                    day['notes'] = day.get('notes','') + f"\n\n### 🤖 自动总结 ({ts})\n{body['text']}"
+                    day['notes'] = write_ai_block(day.get('notes',''), "自动总结", body['text'])
                 save_state(state)
                 return self._ok({"saved":True,"date":ds})
 
@@ -661,18 +695,25 @@ class WorkLogHandler(BaseHTTPRequestHandler):
                     state = load_state()
                     state.setdefault('log',{}).setdefault(today,{'tasks':[],'notes':''})
                     day = state['log'][today]
+                    # 去重: 跳过当天已存在的同名任务 (大小写/空格归一化), 只加真正新的
+                    def _norm(s): return ''.join((s or '').split()).lower()
+                    existing = {_norm(t.get('text','')) for t in day['tasks']}
+                    imported = 0; skipped = 0
                     for t in parsed.get('tasks', []):
+                        key = _norm(t.get('text',''))
+                        if not key or key in existing:
+                            skipped += 1; continue
+                        existing.add(key)
                         day['tasks'].append({
                             'id': int(time.time()*1000) + len(day['tasks']),
                             'text': t.get('text',''), 'done': t.get('done', False),
                             'seconds': t.get('seconds', 0), 'running': False,
                             'startedAt': None, 'project': t.get('project')
                         })
-                    if parsed.get('notes'):
-                        ts = datetime.now().strftime('%H:%M')
-                        day['notes'] = day.get('notes','') + f"\n\n### 🤖 CC 会话总结 ({ts})\n{parsed['notes']}"
+                        imported += 1
+                    # 只加任务, 不再单独写 CC 会话总结块 (已合并进 AI 总结)
                     save_state(state)
-                    return self._ok({"imported": len(parsed.get('tasks',[])), "date": today})
+                    return self._ok({"imported": imported, "skipped": skipped, "date": today})
                 return self._ok({"imported": 0, "raw": result})
 
             elif path == '/weekly-report':
@@ -685,8 +726,7 @@ class WorkLogHandler(BaseHTTPRequestHandler):
                     today_str = datetime.now().strftime('%Y-%m-%d')
                     state = load_state()
                     state.setdefault('log',{}).setdefault(today_str,{'tasks':[],'notes':''})
-                    ts = datetime.now().strftime('%H:%M')
-                    state['log'][today_str]['notes'] += f"\n\n### 🤖 周报 ({ts})\n{report['report']}"
+                    state['log'][today_str]['notes'] = write_ai_block(state['log'][today_str].get('notes',''), "周报", report['report'])
                     save_state(state)
                     report['saved'] = True
                 return self._ok(report)
@@ -742,7 +782,7 @@ def main():
                             if r.get('report'):
                                 state = load_state()
                                 state.setdefault('log',{}).setdefault(today,{'tasks':[],'notes':''})
-                                state['log'][today]['notes'] += f"\n\n### 🤖 本周周报\n{r['report']}"
+                                state['log'][today]['notes'] = write_ai_block(state['log'][today].get('notes',''), "周报", r['report'])
                                 save_state(state)
                                 print(f"[scheduler] ✅ Weekly report saved")
                         except Exception as e:

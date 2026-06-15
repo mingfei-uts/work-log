@@ -4,10 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Daily Work Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;600;700&family=LXGW+WenKai+TC&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
-   Daily Work Log  v7  —  日系墨纸  —  Japanese Ink & Paper
-   Design: warm, layered, no-border cards, animated interactions
+   Daily Work Log  v8  —  日系墨纸  —  Japanese Ink & Paper
+   Serif headings (宋体) + Chinese typography + ink accent
    ============================================================ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -17,18 +20,39 @@
   --line:#dfd8cc; --line-light:#ebe4d6; --hover:#eee6da; --snow:#f6f2ec;
   --sage:#7d9e7d; --sage-bg:#eef3ee; --rust:#c97a5e; --rust-bg:#f9f1ec;
   --blue:#8a9fc0; --blue-bg:#f0f3f8; --amber:#c48f56; --amber-bg:#f9f3ea;
+  /* 印章红 — 赭石, 取自参考库「中文优雅」种子, 点睛专用 */
+  --seal:#c1492f; --seal-soft:#c45c3c;
   --shadow-sm:0 1px 3px rgba(0,0,0,.035),0 1px 2px rgba(0,0,0,.025);
   --shadow:0 2px 6px rgba(0,0,0,.04),0 1px 4px rgba(0,0,0,.03);
   --shadow-lg:0 4px 14px rgba(0,0,0,.05),0 2px 6px rgba(0,0,0,.035);
   --radius:10px; --radius-sm:6px; --radius-xs:4px;
   --font:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --serif:"Noto Serif SC","Songti SC",STSong,"SimSun",serif;       /* 宋体 — 墨字标题 */
+  --kai:"LXGW WenKai TC","Kaiti SC",KaiTi,"楷体",serif;            /* 楷体 — 装饰点缀 */
   --font-mono:"SF Mono","Fira Code","Cascadia Code",monospace;
   --ease:cubic-bezier(.25,.1,.25,1);
 }
 
 html,body{height:100%}
-body{font-family:var(--font);background:var(--paper);color:var(--ink);display:flex;line-height:1.65;-webkit-font-smoothing:antialiased}
+/* 中文排版精修: 行高 1.8, 字距 0.02em (参考库「中文优雅」硬要求) */
+body{font-family:var(--font);background:var(--paper);color:var(--ink);display:flex;line-height:1.8;letter-spacing:.01em;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 #app{display:flex;width:100%;height:100vh;overflow:hidden}
+
+/* ---- 宋体标题体系 ---- */
+#logo{font-family:var(--serif)}
+#date-title,#tools-header h2{font-family:var(--serif);letter-spacing:.5px}
+.section-head{font-family:var(--serif)}
+#cal-label,#cal-nav span{font-family:var(--serif)}
+/* 统计数字用宋体显气韵; 计时数字保留 mono 对齐 */
+.side-stats .val,#daily-summary .sum-val{font-family:var(--serif);font-weight:600}
+
+/* ---- 无障碍: 尊重 prefers-reduced-motion (参考库质量红线) ---- */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+/* ---- 无障碍: 键盘 focus ring ---- */
+:focus-visible{outline:2px solid var(--seal-soft);outline-offset:2px;border-radius:3px}
+button:focus:not(:focus-visible),input:focus:not(:focus-visible){outline:none}
 
 /* ---- Server banner ---- */
 #server-banner{position:fixed;top:0;left:0;right:0;z-index:100;padding:8px 24px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:12px;font-weight:500;transition:all .35s var(--ease)}
@@ -45,8 +69,9 @@ body{font-family:var(--font);background:var(--paper);color:var(--ink);display:fl
 
 /* ---- Sidebar — warm gray, integrated ---- */
 #sidebar{width:228px;min-width:228px;background:var(--sidebar);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:30px 20px 24px;user-select:none;-webkit-user-select:none;overflow-y:auto}
-#logo{font-size:16px;font-weight:700;letter-spacing:-.3px;color:var(--ink);margin-bottom:6px;display:flex;align-items:center;gap:7px}
-#logo .dot{width:8px;height:8px;border-radius:2px;background:var(--ink)}
+#logo{font-size:17px;font-weight:700;letter-spacing:1px;color:var(--ink);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+/* 印章点 — 朱砂方印 */
+#logo .dot{width:9px;height:9px;border-radius:2px;background:var(--seal);box-shadow:0 0 0 2px rgba(193,73,47,.15)}
 #srv-indicator{display:flex;align-items:center;gap:5px;margin-bottom:14px;font-size:10px;color:var(--ink-3)}
 #srv-indicator .si-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
 #srv-indicator .si-dot.ok{background:var(--sage)}#srv-indicator .si-dot.no{background:var(--amber)}
@@ -70,8 +95,10 @@ body{font-family:var(--font);background:var(--paper);color:var(--ink);display:fl
 #cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
 #cal-grid .day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--ink-2);border-radius:50%;cursor:pointer;transition:all .2s var(--ease);position:relative;font-variant-numeric:tabular-nums}
 #cal-grid .day:hover{background:var(--hover)}
-#cal-grid .day.today{color:var(--ink);font-weight:600;box-shadow:inset 0 0 0 1.5px var(--ink)}
+/* 今日 — 朱砂圈点 */
+#cal-grid .day.today{color:var(--seal);font-weight:700;box-shadow:inset 0 0 0 1.5px var(--seal)}
 #cal-grid .day.active{background:var(--ink);color:#fff;font-weight:600;box-shadow:none}
+#cal-grid .day.active.today{color:#fff;box-shadow:none}
 #cal-grid .day.has-data::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:var(--ink-3)}
 #cal-grid .day.active.has-data::after{background:#fff}
 #sidebar-divider{height:1px;background:var(--line);margin:20px 0 16px}
@@ -86,10 +113,42 @@ body{font-family:var(--font);background:var(--paper);color:var(--ink);display:fl
 #proj-filters .proj-pill.active{background:var(--ink);color:#fff;border-color:var(--ink)}
 
 /* ---- Main ---- */
-#main{flex:1;overflow-y:auto;overflow-x:hidden;display:flex;justify-content:center}
-#content{width:100%;max-width:680px;padding:38px 40px 64px;display:flex;flex-direction:column;gap:34px}
-.view{display:flex;flex-direction:column;gap:34px}
+/* 固定一屏: #main 不整体滚动, 列内部各自滚动 */
+#main{flex:1;overflow:hidden;display:flex;justify-content:center}
+/* 自适应宽度: 撑满可用宽度, 超宽屏(>~1800px)才留边距保可读性; 横向 padding 随屏宽缩放 */
+#content{width:100%;max-width:min(1760px,96vw);height:100vh;padding:32px clamp(20px,3.5vw,72px) 28px;display:flex;flex-direction:column;overflow:hidden}
+.view{flex:1;display:flex;flex-direction:column;gap:20px;min-height:0}
 .view.hidden{display:none}
+
+/* 日志视图: 日期/周条固定顶部, 双列填满剩余高度 */
+#view-log #date-header,#view-log #week-strip{flex-shrink:0}
+.log-cols{flex:1;display:flex;gap:20px;min-height:0}
+.log-cols .col{display:flex;flex-direction:column;min-height:0}
+.col-left{flex:1.05}
+.col-right{flex:1;overflow-y:auto;overflow-x:hidden;gap:20px;padding-right:4px}
+/* 右列子元素保持自然高度, 不被压缩 — 超出列高才滚动 */
+.col-right>*{flex-shrink:0}
+/* 左列任务卡填满列高, 仅任务列表内部滚动 */
+.col-left .tasks-section{flex:1;display:flex;flex-direction:column;min-height:0}
+.col-left .tasks-section .section-head,.col-left .tasks-section #task-input-row{flex-shrink:0}
+.col-left #task-list{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0}
+
+/* 工具视图保持可整体滚动 */
+/* HTML 空间视图: 头部固定, iframe 填满剩余高度 */
+#view-tools{flex:1;display:flex;flex-direction:column;min-height:0;gap:16px;overflow:hidden}
+#view-tools.hidden{display:none}  /* ID 级隐藏, 压过 #view-tools 的 display:flex */
+#space-header{flex-shrink:0;display:flex;align-items:baseline;justify-content:space-between}
+#space-header h2{font-family:var(--serif);font-size:28px;font-weight:700;letter-spacing:1px}
+#space-wrap{flex:1;min-height:0;position:relative;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);background:var(--surface)}
+#space-frame{width:100%;height:100%;border:none;display:block}
+#space-frame.hidden{display:none}
+#space-offline{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+#space-offline.hidden{display:none}
+
+/* 列内滚动条 — 细而淡 */
+.col-right::-webkit-scrollbar,.col-left #task-list::-webkit-scrollbar,#view-tools::-webkit-scrollbar{width:8px}
+.col-right::-webkit-scrollbar-thumb,.col-left #task-list::-webkit-scrollbar-thumb,#view-tools::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;border:2px solid transparent;background-clip:padding-box}
+.col-right::-webkit-scrollbar-thumb:hover,.col-left #task-list::-webkit-scrollbar-thumb:hover,#view-tools::-webkit-scrollbar-thumb:hover{background:#d0c8b8;background-clip:padding-box}
 
 /* ---- Buttons ---- */
 .btn{display:inline-flex;align-items:center;gap:5px;padding:7px 15px;font-size:12px;font-weight:500;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink-2);cursor:pointer;font-family:var(--font);line-height:1.4;transition:all .2s var(--ease);white-space:nowrap}
@@ -99,10 +158,10 @@ body{font-family:var(--font);background:var(--paper);color:var(--ink);display:fl
 .btn.danger{color:#c06050;border-color:#e0c0b8}
 .btn.danger:hover{background:#faf3f2}
 
-/* ---- Date header ---- */
-#date-header{display:flex;align-items:baseline;justify-content:space-between}
-#date-header h2{font-size:28px;font-weight:700;letter-spacing:-.6px}
-#date-header .wd{font-size:14px;font-weight:400;color:var(--ink-3);margin-left:10px}
+/* ---- Date header — 宋体大字, 墨韵 ---- */
+#date-header{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:12px}
+#date-header h2{font-size:30px;font-weight:700;letter-spacing:1px;line-height:1.3;white-space:nowrap}
+#date-header .wd{font-family:var(--kai);font-size:15px;font-weight:400;color:var(--seal-soft);margin-left:12px;white-space:nowrap}
 #header-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 
 /* ---- Week strip ---- */
@@ -118,8 +177,10 @@ body{font-family:var(--font);background:var(--paper);color:var(--ink);display:fl
 /* ---- Section cards — NO borders, soft shadow ---- */
 .section{background:var(--surface);border:none;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:box-shadow .2s var(--ease)}
 .section:hover{box-shadow:var(--shadow-lg)}
-.section-head{display:flex;align-items:center;justify-content:space-between;padding:15px 22px;font-size:13px;font-weight:600;color:var(--ink);letter-spacing:-.1px;border-bottom:1px solid var(--line-light)}
-.section-head .badge{font-size:11px;font-weight:500;color:var(--ink-3)}
+/* 章节标题 — 宋体 + 朱批左标记 */
+.section-head{display:flex;align-items:center;justify-content:space-between;padding:15px 22px 15px 20px;font-size:15px;font-weight:600;color:var(--ink);letter-spacing:1px;border-bottom:1px solid var(--line-light);position:relative}
+.section-head::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:15px;border-radius:0 2px 2px 0;background:var(--seal-soft);opacity:.65}
+.section-head .badge{font-family:var(--font);font-size:11px;font-weight:500;color:var(--ink-3);letter-spacing:0}
 
 /* ---- Task input ---- */
 #task-input-row{display:flex;align-items:center;background:var(--white);border-bottom:1px solid var(--line-light)}
@@ -175,8 +236,38 @@ body{font-family:var(--font);background:var(--paper);color:var(--ink);display:fl
 .empty-state .icon{font-size:38px;margin-bottom:10px;opacity:.3}
 
 /* ---- Notes ---- */
-#notes-area{width:100%;min-height:200px;border:none;resize:vertical;font-family:var(--font);font-size:13px;line-height:1.85;color:var(--ink);outline:0;padding:20px 22px;background:0 0}
-#notes-area::placeholder{color:var(--ink-3)}
+#notes-area{width:100%;min-height:200px;border:none;resize:vertical;font-family:var(--font-mono);font-size:12.5px;line-height:1.8;color:var(--ink-2);outline:0;padding:20px 22px;background:0 0}
+#notes-area::placeholder{color:var(--ink-3);font-family:var(--font)}
+#notes-area.hidden{display:none}
+/* 笔记区 预览/编辑 切换按钮 */
+.md-toggle{font-family:var(--font);font-size:11px;font-weight:500;color:var(--ink-3);background:0 0;border:1px solid var(--line);border-radius:12px;padding:3px 12px;cursor:pointer;transition:all .2s var(--ease);letter-spacing:0}
+.md-toggle:hover{background:var(--hover);color:var(--ink-2);border-color:#d0c8b8}
+/* ---- Markdown 渲染样式 (墨纸风) ---- */
+.md-body{padding:20px 24px;font-size:13px;line-height:1.85;color:var(--ink);min-height:60px}
+.md-body.hidden{display:none}
+.md-body:empty::before{content:'还没有内容，点「编辑」写点什么';color:var(--ink-3);font-size:13px}
+.md-body h1,.md-body h2,.md-body h3,.md-body h4,.md-body h5,.md-body h6{font-family:var(--serif);font-weight:600;color:var(--ink);letter-spacing:.5px;line-height:1.4}
+.md-body h1{font-size:19px;margin:18px 0 10px}
+.md-body h2{font-size:16px;margin:16px 0 9px}
+.md-body h3,.md-body h4{font-size:14px;margin:15px 0 8px;padding-left:10px;border-left:3px solid var(--seal-soft);border-radius:0 2px 2px 0}
+.md-body h5,.md-body h6{font-size:13px;margin:12px 0 6px;color:var(--ink-2)}
+.md-body h1:first-child,.md-body h2:first-child,.md-body h3:first-child,.md-body h4:first-child{margin-top:0}
+.md-body p{margin:9px 0}
+.md-body ul,.md-body ol{margin:9px 0;padding-left:22px}
+.md-body li{margin:5px 0;line-height:1.7}
+.md-body li::marker{color:var(--seal-soft)}
+.md-body strong{font-weight:600;color:var(--ink)}
+.md-body em{font-style:normal;font-family:var(--kai);color:var(--ink-2)}
+.md-body code{font-family:var(--font-mono);font-size:.88em;background:var(--snow);padding:1px 6px;border-radius:4px;color:var(--seal)}
+.md-body a{color:var(--blue);text-decoration:none;border-bottom:1px solid transparent;transition:border .15s}
+.md-body a:hover{border-bottom-color:var(--blue)}
+.md-body hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+.md-body blockquote{margin:10px 0;padding:6px 16px;border-left:3px solid var(--line);color:var(--ink-2);background:var(--snow);border-radius:0 4px 4px 0}
+.md-body .md-task{list-style:none;margin-left:-22px;padding-left:0}
+.md-body .md-task .box{display:inline-block;width:14px;height:14px;border:1.5px solid #c8c2b6;border-radius:3px;margin-right:7px;vertical-align:-2px;position:relative}
+.md-body .md-task.done .box{background:var(--sage);border-color:var(--sage)}
+.md-body .md-task.done .box::after{content:'';position:absolute;left:4px;top:1px;width:4px;height:7px;border:solid #fff;border-width:0 1.5px 1.5px 0;transform:rotate(45deg)}
+.md-body .md-task.done{color:var(--ink-3);text-decoration:line-through}
 
 /* ---- Summary ---- */
 #daily-summary{display:flex;gap:28px;flex-wrap:wrap;font-size:12px;color:var(--ink-3);padding:0 6px}
@@ -184,7 +275,8 @@ body{font-family:var(--font);background:var(--paper);color:var(--ink);display:fl
 #daily-summary .sum-val{font-weight:600;font-size:13px;color:var(--ink-2);font-variant-numeric:tabular-nums}
 
 /* ---- AI result ---- */
-#ai-summary-result{background:var(--surface);border:none;border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 22px;font-size:13px;line-height:1.8;white-space:pre-wrap;color:var(--ink)}
+#ai-summary-result{background:var(--surface);border:none;border-radius:var(--radius);box-shadow:var(--shadow);color:var(--ink)}
+#ai-summary-result.loading{padding:18px 22px;font-size:13px;color:var(--ink-3)}
 
 /* ---- Toast ---- */
 #toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ink);color:#fff;padding:9px 22px;border-radius:20px;font-size:12px;font-weight:500;opacity:0;pointer-events:none;transition:all .3s var(--ease);z-index:999}
@@ -232,9 +324,18 @@ body{font-family:var(--font);background:var(--paper);color:var(--ink);display:fl
 #tool-form textarea{width:100%;resize:vertical;min-height:60px;line-height:1.6}
 #tool-form .tf-actions{display:flex;gap:8px;justify-content:flex-end}
 
+@media(max-width:860px){
+  /* 窄屏: 取消固定一屏, 双列改上下堆叠, 整页可滚动 */
+  #main{overflow-y:auto}
+  #content{height:auto;min-height:100vh;overflow:visible;padding:24px 16px 48px}
+  .view{min-height:0}
+  .log-cols{flex-direction:column;min-height:0}
+  .log-cols .col,.col-left,.col-right{min-height:0;overflow:visible}
+  .col-left .tasks-section{min-height:0}
+  .col-left #task-list{max-height:48vh}
+}
 @media(max-width:720px){
   #sidebar{display:none}
-  #content{padding:24px 16px 48px}
   #date-header h2,#tools-header h2{font-size:22px}
 }
 </style>
@@ -249,7 +350,7 @@ body{font-family:var(--font);background:var(--paper);color:var(--ink);display:fl
     <div id="srv-indicator"><span class="si-dot no" id="si-dot"></span><span id="si-text">离线</span></div>
     <nav id="side-nav">
       <button class="active" data-view="log">日志</button>
-      <button data-view="tools">工具</button>
+      <button data-view="tools">空间</button>
     </nav>
 
     <div class="side-panel" id="side-log">
@@ -271,9 +372,12 @@ body{font-family:var(--font);background:var(--paper);color:var(--ink);display:fl
     </div>
 
     <div class="side-panel hidden" id="side-tools">
-      <div class="side-stats"><div class="stat"><span>工具总数</span><span class="val" id="tstat-total">0</span></div><div class="stat"><span>本周新增</span><span class="val" id="tstat-weekly">0</span></div></div>
-      <div style="height:1px;background:var(--line);margin:20px 0 16px"></div>
-      <div class="side-stats" id="tstat-cats"></div>
+      <div style="font-size:11px;color:var(--ink-3);line-height:1.85">把任意 HTML 页面收进你的空间 —— 收藏即把外链全部内联成<strong style="color:var(--ink-2)">永不腐烂的单文件</strong>，断网也能完整打开。</div>
+      <div style="height:1px;background:var(--line);margin:18px 0 14px"></div>
+      <div class="side-stats">
+        <div class="stat"><span>空间服务</span><span class="val" id="space-status">检测中…</span></div>
+      </div>
+      <div style="margin-top:14px"><button class="btn" id="space-newtab" style="width:100%;justify-content:center">在新标签打开 ↗</button></div>
     </div>
   </aside>
 
@@ -290,26 +394,46 @@ body{font-family:var(--font);background:var(--paper);color:var(--ink);display:fl
           </div>
         </div>
         <div id="week-strip"></div>
-        <div class="section">
-          <div class="section-head">任务<span class="badge" id="task-progress"></span></div>
-          <div id="task-input-row">
-            <input id="task-input" type="text" placeholder="添加任务... (修bug 2h ✓ 项目名)" autocomplete="off" maxlength="500">
-            <input id="task-proj" type="text" placeholder="项目" list="proj-list" autocomplete="off">
-            <datalist id="proj-list"></datalist>
-            <button id="add-task-btn">添加</button>
+        <div class="log-cols">
+          <!-- 左列: 任务 (列表内部滚动) -->
+          <div class="col col-left">
+            <div class="section tasks-section">
+              <div class="section-head">任务<span class="badge" id="task-progress"></span></div>
+              <div id="task-input-row">
+                <input id="task-input" type="text" placeholder="添加任务... (修bug 2h ✓ 项目名)" autocomplete="off" maxlength="500">
+                <input id="task-proj" type="text" placeholder="项目" list="proj-list" autocomplete="off">
+                <datalist id="proj-list"></datalist>
+                <button id="add-task-btn">添加</button>
+              </div>
+              <ul id="task-list"></ul>
+            </div>
           </div>
-          <ul id="task-list"></ul>
+          <!-- 右列: 笔记 + 总结 (整列滚动) -->
+          <div class="col col-right">
+            <div class="section notes-section"><div class="section-head">笔记<button class="md-toggle" id="notes-toggle" title="切换预览/编辑">预览</button></div><div id="notes-preview" class="md-body"></div><textarea id="notes-area" class="hidden" placeholder="写点什么... (⌘S 保存)"></textarea></div>
+            <div id="daily-summary"><div class="sum-item">⏱ <span class="sum-val" id="sum-total">—</span> 时长</div><div class="sum-item">✓ <span class="sum-val" id="sum-done">0</span> 完成</div><div class="sum-item">○ <span class="sum-val" id="sum-pending">0</span> 进行</div></div>
+            <div id="ai-summary-result" style="display:none"></div>
+          </div>
         </div>
-        <div class="section"><div class="section-head">笔记</div><textarea id="notes-area" placeholder="写点什么... (⌘S 保存)"></textarea></div>
-        <div id="daily-summary"><div class="sum-item">⏱ <span class="sum-val" id="sum-total">—</span> 时长</div><div class="sum-item">✓ <span class="sum-val" id="sum-done">0</span> 完成</div><div class="sum-item">○ <span class="sum-val" id="sum-pending">0</span> 进行</div></div>
-        <div id="ai-summary-result" style="display:none"></div>
       </div>
 
       <div class="view hidden" id="view-tools">
-        <div id="tools-header"><div><h2>工具箱<span class="count" id="tools-count"></span></h2></div><button class="btn primary" id="show-add-form">+ 添加</button></div>
-        <div id="tools-bar"><input id="tools-search" type="text" placeholder="搜索..." autocomplete="off"><div id="cat-filters"><button class="cat-pill active" data-cat="all">全部</button><button class="cat-pill" data-cat="0">开发</button><button class="cat-pill" data-cat="1">写作</button><button class="cat-pill" data-cat="2">研究</button><button class="cat-pill" data-cat="3">效率</button><button class="cat-pill" data-cat="4">服务器</button><button class="cat-pill" data-cat="5">其他</button></div></div>
-        <div id="tool-form" class="hidden"><div class="tf-row"><input class="tf-name" id="tf-name" type="text" placeholder="工具名称" maxlength="100"><select class="tf-cat" id="tf-cat"><option value="0">开发</option><option value="1">写作</option><option value="2">研究</option><option value="3">效率</option><option value="4">服务器</option><option value="5">其他</option></select></div><div class="tf-row"><input class="tf-url" id="tf-url" type="text" placeholder="链接或命令"></div><textarea id="tf-desc" placeholder="描述"></textarea><div class="tf-actions"><button class="btn" id="tf-cancel">取消</button><button class="btn primary" id="tf-save">保存</button></div></div>
-        <div id="tools-grid"></div>
+        <div id="space-header">
+          <h2>HTML 空间</h2>
+          <button class="btn" id="space-reload">⟳ 刷新</button>
+        </div>
+        <div id="space-wrap">
+          <iframe id="space-frame" title="HTML 空间" referrerpolicy="no-referrer"></iframe>
+          <div id="space-offline" class="hidden">
+            <div class="empty-state">
+              <div class="icon">📚</div>
+              <div style="font-weight:600;color:var(--ink-2);margin-bottom:6px">HTML 空间未启动</div>
+              在终端运行<br>
+              <code style="font-family:var(--font-mono);background:var(--snow);padding:3px 8px;border-radius:4px;color:var(--seal);display:inline-block;margin:8px 0">python3 ~/Desktop/Research/htmlspace/htmlspace.py</code><br>
+              启动后点上方「刷新」
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </main>
@@ -325,12 +449,44 @@ const SERVER='http://127.0.0.1:19878', CAT_NAMES=['开发','写作','研究','�
 const LS_LOG='wl-v7-log', LS_TOOLS='wl-v7-tools';
 
 let currentView='log', currentDate=todayStr(), logData={}, toolsData=[], serverOnline=false;
-let projFilter='all';
+let projFilter='all', notesMode='preview';
 
 function todayStr(){return fmtDate(new Date())}
 function fmtDate(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function parseDate(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)}
 function escHtml(s){const m={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};return s.replace(/[&<>"']/g,c=>m[c])}
+
+/* ---- 轻量 Markdown 渲染器 (先转义防 XSS, 再行级解析) ---- */
+function renderInline(s){
+  return escHtml(s)
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*]+?)\*/g,'$1<em>$2</em>')
+    .replace(/(^|[^_])_([^_]+?)_/g,'$1<em>$2</em>')
+    .replace(/`([^`]+?)`/g,'<code>$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(https?:\/\/[^\s<]+)/g,m=>/href=/.test(m)?m:`<a href="${m}" target="_blank" rel="noopener">${m.replace(/^https?:\/\//,'')}</a>`);
+}
+function renderMD(src){
+  if(!src||!src.trim())return'';
+  const lines=src.replace(/\r\n/g,'\n').split('\n');
+  let html='',listType=null,para=[];
+  const flushPara=()=>{if(para.length){html+=`<p>${para.map(renderInline).join('<br>')}</p>`;para=[]}};
+  const closeList=()=>{if(listType){html+=`</${listType}>`;listType=null}};
+  for(let raw of lines){
+    const line=raw.replace(/\s+$/,'');
+    if(!line.trim()){flushPara();closeList();continue}
+    let m;
+    if(m=line.match(/^(#{1,6})\s+(.*)/)){flushPara();closeList();const lv=Math.min(m[1].length,6);html+=`<h${lv}>${renderInline(m[2])}</h${lv}>`;continue}
+    if(/^(\s*)([-*_])\1*\s*$/.test(line)||/^\s*([-*])\s*\1\s*\1\s*$/.test(line)||/^-{3,}$/.test(line.trim())||/^\*{3,}$/.test(line.trim())){flushPara();closeList();html+='<hr>';continue}
+    if(m=line.match(/^\s*[-*]\s+\[([ xX])\]\s+(.*)/)){flushPara();if(listType!=='ul'){closeList();html+='<ul>';listType='ul'}const done=m[1].toLowerCase()==='x';html+=`<li class="md-task${done?' done':''}"><span class="box"></span>${renderInline(m[2])}</li>`;continue}
+    if(m=line.match(/^\s*[-*]\s+(.*)/)){flushPara();if(listType!=='ul'){closeList();html+='<ul>';listType='ul'}html+=`<li>${renderInline(m[1])}</li>`;continue}
+    if(m=line.match(/^\s*\d+\.\s+(.*)/)){flushPara();if(listType!=='ol'){closeList();html+='<ol>';listType='ol'}html+=`<li>${renderInline(m[1])}</li>`;continue}
+    if(m=line.match(/^\s*>\s?(.*)/)){flushPara();closeList();html+=`<blockquote>${renderInline(m[1])}</blockquote>`;continue}
+    para.push(line);
+  }
+  flushPara();closeList();
+  return html;
+}
 function fmtDuration(sec){if(sec<=0)return'—';const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);return h>0?`${h}h ${m}m`:`${m}m`}
 function fmtDurationLong(sec){if(sec<=0)return'0 分钟';const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);return[h>0?`${h} 小时`:'',m>0?`${m} 分钟`:''].filter(Boolean).join(' ')||'0 分钟'}
 
@@ -386,7 +542,21 @@ function renderCalendar(){const mNames='一月 二月 三月 四月 五月 六�
 function renderWeekStrip(){const d=parseDate(currentDate),dow=d.getDay(),mon=new Date(d);mon.setDate(d.getDate()-(dow===0?6:dow-1));const labels='一 二 三 四 五 六 日'.split(' ');let h='';for(let i=0;i<7;i++){const day=new Date(mon);day.setDate(mon.getDate()+i);const ds=fmtDate(day),cls=(ds===currentDate)?'wd-item current':'wd-item';h+=`<div class="${cls}" data-date="${ds}"><span class="wd-label">${labels[i]}</span><span class="wd-num">${day.getDate()}</span></div>`}const s=document.getElementById('week-strip');s.innerHTML=h;s.querySelectorAll('.wd-item').forEach(el=>{el.addEventListener('click',()=>{const ds=el.dataset.date;if(ds!==currentDate)navigateTo(ds)})})}
 function renderProjFilters(){const projects=getProjects();const container=document.getElementById('proj-filters');if(!projects.length){container.innerHTML='<button class="proj-pill active" data-proj="all">全部</button>';return}let h='<button class="proj-pill active" data-proj="all">全部</button>';for(const p of projects){const c=getProjColor(p);h+=`<button class="proj-pill" data-proj="${escHtml(p)}">${escHtml(p)}</button>`}container.innerHTML=h;container.querySelectorAll('.proj-pill').forEach(pill=>{pill.addEventListener('click',()=>{container.querySelectorAll('.proj-pill').forEach(p=>p.classList.remove('active'));pill.classList.add('active');projFilter=pill.dataset.proj;renderTasks()})})}
 function renderTasks(){const day=getDay(currentDate),list=document.getElementById('task-list'),badge=document.getElementById('task-progress');let tasks=day.tasks;if(projFilter!=='all')tasks=tasks.filter(t=>(t.project||'')===projFilter);const total=tasks.length,done=tasks.filter(t=>t.done).length;badge.textContent=total?`${done}/${total}`:'';if(!day.tasks.length){list.innerHTML='<div class="empty-state"><div class="icon">—</div>暂无任务<br>支持自然语言: 修bug 2h ✓ 项目名</div>';return}if(!tasks.length&&projFilter!=='all'){list.innerHTML='<div class="empty-state"><div class="icon">—</div>该项目下无任务</div>';return}list.innerHTML=tasks.map(t=>{let sec=t.seconds;if(t.running&&t.startedAt)sec+=Math.max(0,Math.floor((Date.now()-new Date(t.startedAt).getTime())/1000));const pc=getProjColor(t.project||'');return`<li class="${t.done?'done':''}" data-id="${t.id}"><div class="check" data-action="toggle"></div><span class="task-text">${escHtml(t.text)}</span>${t.project?`<span class="task-proj-tag c${pc}">${escHtml(t.project)}</span>`:''}<div class="task-timer"><span class="task-time-val">${sec>0?fmtDuration(sec):''}</span><span class="timer-dot${t.running?' running':''}" data-action="timer" title="${t.running?'停止':'开始'}"></span></div><button class="task-del" data-action="delete" title="删除">×</button></li>`}).join('');list.querySelectorAll('[data-action]').forEach(el=>{el.addEventListener('click',e=>{e.stopPropagation();const id=Number(el.closest('li').dataset.id),a=el.dataset.action;if(a==='toggle')toggleTask(id);else if(a==='timer')toggleTimer(id);else if(a==='delete'){if(confirm('删除？'))deleteTask(id)}renderAllLog()})})}
-function renderNotes(){document.getElementById('notes-area').value=getDay(currentDate).notes||''}
+function renderNotes(){
+  const txt=getDay(currentDate).notes||'';
+  const ta=document.getElementById('notes-area'),pv=document.getElementById('notes-preview'),btn=document.getElementById('notes-toggle');
+  ta.value=txt;
+  pv.innerHTML=renderMD(txt);
+  const editing=notesMode==='edit';
+  ta.classList.toggle('hidden',!editing);
+  pv.classList.toggle('hidden',editing);
+  btn.textContent=editing?'预览':'编辑';
+}
+function toggleNotesMode(){
+  notesMode=notesMode==='edit'?'preview':'edit';
+  renderNotes();
+  if(notesMode==='edit')document.getElementById('notes-area').focus();
+}
 function renderDailySummary(){const day=getDay(currentDate);let ts=0;for(const t of day.tasks){let s=t.seconds;if(t.running&&t.startedAt)s+=Math.max(0,Math.floor((Date.now()-new Date(t.startedAt).getTime())/1000));ts+=s}document.getElementById('sum-total').textContent=fmtDuration(ts);document.getElementById('sum-done').textContent=day.tasks.filter(t=>t.done).length;document.getElementById('sum-pending').textContent=day.tasks.filter(t=>!t.done).length}
 function renderSidebarStats(){const now=new Date(),y=now.getFullYear(),m=now.getMonth();let days=0,sec=0,done=0;for(const[k,day] of Object.entries(logData)){const d=parseDate(k);if(d.getFullYear()===y&&d.getMonth()===m){if(day.tasks.length||(day.notes&&day.notes.trim()))days++;for(const t of day.tasks){sec+=t.seconds||0;if(t.done)done++}}}document.getElementById('stat-days').textContent=`${days}天`;document.getElementById('stat-hours').textContent=fmtDuration(sec);document.getElementById('stat-done').textContent=done}
 function renderDateHeader(){const d=parseDate(currentDate),w=['日','一','二','三','四','五','六'][d.getDay()];document.getElementById('date-title').innerHTML=`${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日<span class="wd">星期${w}</span>`}
@@ -395,16 +565,34 @@ function navigateTo(ds){reconcileTimers();currentDate=ds;syncCal();afterChange()
 
 let tick=null;function startTick(){clearInterval(tick);tick=setInterval(()=>{const day=logData[currentDate];if(day&&day.tasks.some(t=>t.running)){renderTasks();renderDailySummary()}},15000)}
 
-async function generateAISummary(){if(!serverOnline){toast('服务器未连接');return}const resultDiv=document.getElementById('ai-summary-result');resultDiv.style.display='block';resultDiv.textContent='🤖 正在生成 AI 总结...';try{const r=await srv(`/generate-summary/${currentDate}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({save:true}),timeout:60000});resultDiv.textContent=r.summary;toast('已生成并保存');const state=await srv('/state');unpackData(state);saveLS();renderNotes()}catch(e){resultDiv.textContent='❌ 生成失败: '+e.message}}
-async function generateWeeklyReport(){if(!serverOnline){toast('服务器未连接');return}const resultDiv=document.getElementById('ai-summary-result');resultDiv.style.display='block';resultDiv.textContent='📊 正在生成周报...';try{const r=await srv('/weekly-report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:currentDate,save:true}),timeout:90000});resultDiv.textContent=r.report;toast('周报已生成');const state=await srv('/state');unpackData(state);saveLS();renderNotes()}catch(e){resultDiv.textContent='❌ 失败: '+e.message}}
-async function importCCSession(){if(!serverOnline){toast('服务器未连接');return}const resultDiv=document.getElementById('ai-summary-result');resultDiv.style.display='block';resultDiv.textContent='📥 正在分析 Claude Code 会话...';try{const r=await srv('/cc-import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({limit:3}),timeout:60000});if(r.imported>0){toast(`从 CC 导入了 ${r.imported} 条任务`)}else{resultDiv.textContent='未检测到新的 CC 会话内容'}const state=await srv('/state');unpackData(state);saveLS();renderAllLog()}catch(e){resultDiv.textContent='❌ 失败: '+e.message}}
+function aiLoading(msg){const d=document.getElementById('ai-summary-result');d.style.display='block';d.className='loading';d.textContent=msg}
+function aiResult(md){const d=document.getElementById('ai-summary-result');d.style.display='block';d.className='md-body';d.innerHTML=renderMD(md)}
+function aiError(msg){const d=document.getElementById('ai-summary-result');d.style.display='block';d.className='loading';d.textContent=msg}
+async function generateAISummary(){if(!serverOnline){toast('服务器未连接');return}aiLoading('🤖 正在生成 AI 总结...');try{const r=await srv(`/generate-summary/${currentDate}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({save:true}),timeout:60000});aiResult(r.summary);toast('已生成并保存');const state=await srv('/state');unpackData(state);saveLS();renderNotes()}catch(e){aiError('❌ 生成失败: '+e.message)}}
+async function generateWeeklyReport(){if(!serverOnline){toast('服务器未连接');return}aiLoading('📊 正在生成周报...');try{const r=await srv('/weekly-report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:currentDate,save:true}),timeout:90000});aiResult(r.report);toast('周报已生成');const state=await srv('/state');unpackData(state);saveLS();renderNotes()}catch(e){aiError('❌ 失败: '+e.message)}}
+async function importCCSession(){if(!serverOnline){toast('服务器未连接');return}aiLoading('📥 正在分析 Claude Code 会话...');try{const r=await srv('/cc-import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({limit:3}),timeout:60000});const d=document.getElementById('ai-summary-result');if(r.imported>0){toast(`从 CC 导入了 ${r.imported} 条新任务`+(r.skipped?`（跳过 ${r.skipped} 条重复）`:''));d.style.display='none'}else if(r.skipped>0){toast(`无新任务（${r.skipped} 条均已存在）`);d.style.display='none'}else{aiError('未检测到新的 CC 会话内容')}const state=await srv('/state');unpackData(state);saveLS();renderAllLog()}catch(e){aiError('❌ 失败: '+e.message)}}
 
 function exportMarkdown(){const day=getDay(currentDate),d=parseDate(currentDate),w=['日','一','二','三','四','五','六'][d.getDay()];let md=`# ${currentDate} 星期${w}\n\n## 任务\n\n`;if(!day.tasks.length)md+='(无)\n\n';else{for(const t of day.tasks){md+=`- ${t.done?'[x]':'[ ]'} ${t.text}`;if(t.project)md+=` _${t.project}_`;if(t.seconds>0)md+=` (${fmtDurationLong(t.seconds)})`;md+='\n'}md+='\n'}md+=`## 笔记\n\n${day.notes||'(无)'}\n`;return md}
 function doExport(){const md=exportMarkdown();const b=new Blob([md],{type:'text/markdown;charset=utf-8'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`work-log-${currentDate}.md`;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);toast('已导出')}
 
 let toolsSearch='',toolsFilterCat='all';
 function getFilteredTools(){let list=[...toolsData];if(toolsFilterCat!=='all')list=list.filter(t=>String(t.cat)===toolsFilterCat);if(toolsSearch.trim()){const q=toolsSearch.trim().toLowerCase();list=list.filter(t=>t.name.toLowerCase().includes(q)||(t.desc||'').toLowerCase().includes(q)||(t.url||'').toLowerCase().includes(q))}return list}
-function renderAllTools(){renderToolsSidebarStats();renderToolsGrid()}
+/* ---- HTML 空间 (内嵌 htmlspace :7820) ---- */
+const SPACE_URL='http://127.0.0.1:7820/';
+async function renderAllTools(){
+  const frame=document.getElementById('space-frame'),offline=document.getElementById('space-offline'),status=document.getElementById('space-status');
+  let up=false;
+  try{await fetch(SPACE_URL,{signal:AbortSignal.timeout(2000),mode:'no-cors'});up=true}catch{up=false}
+  if(up){
+    if(!frame.src)frame.src=SPACE_URL;
+    frame.classList.remove('hidden');offline.classList.add('hidden');
+    if(status){status.textContent='已连接';status.style.color='var(--sage)'}
+  }else{
+    frame.classList.add('hidden');offline.classList.remove('hidden');
+    if(status){status.textContent='未启动';status.style.color='var(--amber)'}
+  }
+}
+function reloadSpace(){document.getElementById('space-frame').src=SPACE_URL;renderAllTools()}
 function renderToolsSidebarStats(){const total=toolsData.length,weekAgo=Date.now()-7*24*3600*1000,weekly=toolsData.filter(t=>(t.createdAt||0)>weekAgo).length;document.getElementById('tstat-total').textContent=total;document.getElementById('tstat-weekly').textContent=weekly;const counts={};for(const t of toolsData){const c=CAT_NAMES[t.cat]||'其他';counts[c]=(counts[c]||0)+1}document.getElementById('tstat-cats').innerHTML=Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="stat"><span>${k}</span><span class="val">${v}</span></div>`).join('')||'<div class="stat"><span>暂无</span><span class="val">—</span></div>'}
 function renderToolsGrid(){const grid=document.getElementById('tools-grid'),count=document.getElementById('tools-count'),filtered=getFilteredTools();count.textContent=toolsData.length?`${filtered.length}/${toolsData.length}`:'';if(!toolsData.length&&!editingToolId){grid.innerHTML='<div class="empty-state"><div class="icon">🔧</div>还没有工具</div>';return}if(!filtered.length){grid.innerHTML='<div class="empty-state"><div class="icon">—</div>无匹配</div>';return}grid.innerHTML=filtered.map(t=>{const ud=t.url?t.url.replace(/^https?:\/\//,''):'';return`<div class="tool-card" data-id="${t.id}"><div class="tc-top"><span class="tc-name">${escHtml(t.name)}</span><span class="tc-actions"><button data-action="edit-tool" title="编辑">✎</button><button class="del" data-action="delete-tool" title="删除">×</button></span></div>${t.desc?`<div class="tc-desc">${escHtml(t.desc)}</div>`:''}<div class="tc-bottom"><span class="tc-cat c${t.cat}">${CAT_NAMES[t.cat]||'其他'}</span>${t.url?`<div class="tc-url-row"><a class="tc-url" href="${escHtml(t.url)}" target="_blank" rel="noopener">${escHtml(ud)}</a><button class="tc-copy" data-action="copy-url" data-url="${escHtml(t.url)}">📋</button></div>`:'<span></span>'}</div></div>`}).join('');grid.querySelectorAll('[data-action]').forEach(el=>{el.addEventListener('click',e=>{e.stopPropagation();const card=el.closest('.tool-card'),id=Number(card.dataset.id),a=el.dataset.action;if(a==='edit-tool')startEditTool(id);else if(a==='delete-tool'){if(confirm('删除？')){deleteTool(id);renderAllTools()}}else if(a==='copy-url'){copyUrl(el.dataset.url,el)}})});}
 function copyUrl(url,btn){navigator.clipboard.writeText(url).then(()=>{btn.classList.add('copied');btn.textContent='✓';setTimeout(()=>{btn.classList.remove('copied');btn.textContent='📋'},1500)}).catch(()=>toast('复制失败'))}
@@ -422,6 +610,7 @@ document.getElementById('add-task-btn').addEventListener('click',async()=>{const
 document.getElementById('task-input').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('add-task-btn').click()});
 document.getElementById('task-proj').addEventListener('focus',()=>{const dl=document.getElementById('proj-list');dl.innerHTML=getProjects().map(p=>`<option value="${escHtml(p)}">`).join('')});
 let notesTimer=null;document.getElementById('notes-area').addEventListener('input',e=>{setNotes(e.target.value);clearTimeout(notesTimer);notesTimer=setTimeout(renderSidebarStats,2000)});
+document.getElementById('notes-toggle').addEventListener('click',toggleNotesMode);
 document.getElementById('cal-prev').addEventListener('click',()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--}renderCalendar()});
 document.getElementById('cal-next').addEventListener('click',()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++}renderCalendar()});
 document.getElementById('today-btn').addEventListener('click',()=>navigateTo(todayStr()));
@@ -429,12 +618,8 @@ document.getElementById('export-btn').addEventListener('click',doExport);
 document.getElementById('ai-summary-btn').addEventListener('click',generateAISummary);
 document.getElementById('weekly-btn').addEventListener('click',generateWeeklyReport);
 document.getElementById('cc-import-btn').addEventListener('click',importCCSession);
-document.getElementById('show-add-form').addEventListener('click',showAddForm);
-document.getElementById('tf-cancel').addEventListener('click',hideForm);
-document.getElementById('tf-save').addEventListener('click',saveToolForm);
-document.getElementById('tf-name').addEventListener('keydown',e=>{if(e.key==='Enter')saveToolForm()});
-document.getElementById('tools-search').addEventListener('input',e=>{toolsSearch=e.target.value;renderToolsGrid()});
-document.querySelectorAll('#cat-filters .cat-pill').forEach(p=>{p.addEventListener('click',()=>{document.querySelectorAll('#cat-filters .cat-pill').forEach(x=>x.classList.remove('active'));p.classList.add('active');toolsFilterCat=p.dataset.cat;renderToolsGrid()})});
+document.getElementById('space-reload').addEventListener('click',reloadSpace);
+document.querySelectorAll('#space-newtab').forEach(b=>b.addEventListener('click',()=>window.open(SPACE_URL,'_blank')));
 document.getElementById('sb-retry').addEventListener('click',()=>checkServer().then(ok=>{if(ok){srv('/state').then(s=>{unpackData(s);saveLS();renderCurrentView()}).catch(()=>{})}}));
 
 document.addEventListener('keydown',e=>{const mod=e.metaKey||e.ctrlKey;if(mod&&e.key==='s'){e.preventDefault();saveNow();toast('已保存')}if(mod&&e.key==='e'){e.preventDefault();if(currentView==='log')doExport()}if(mod&&e.key==='ArrowLeft'){e.preventDefault();if(currentView==='log'){const d=parseDate(currentDate);d.setDate(d.getDate()-1);navigateTo(fmtDate(d))}}if(mod&&e.key==='ArrowRight'){e.preventDefault();if(currentView==='log'){const d=parseDate(currentDate);d.setDate(d.getDate()+1);navigateTo(fmtDate(d))}}if(mod&&e.key==='1'){e.preventDefault();switchView('log')}if(mod&&e.key==='2'){e.preventDefault();switchView('tools')}if(mod&&e.key==='i'){e.preventDefault();generateAISummary()}});

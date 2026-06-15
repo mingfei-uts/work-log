@@ -1,16 +1,23 @@
-# Sensitive files — NEVER commit
-.work-log.env
-work-log-data.json
-*.jsonl
-*.tmp
+# ============================================================
+#  白名单制 .gitignore
+#  本仓库与其他项目共用 ~/Desktop/Research 父目录,
+#  故默认忽略一切, 仅放行 work-log 自身文件, 杜绝误提交。
+# ============================================================
 
-# macOS
-.DS_Store
+# 1) 先忽略所有东西
+*
 
-# Python
-__pycache__/
-*.pyc
+# 2) 再放行 work-log 的源码与文档
+!.gitignore
+!README.md
+!LICENSE
+!.work-log.env.example
+!daily-work-log.html
+!work-log-server.py
+!work-log-cli.py
+!start-work-log.sh
 
-# IDE
-.vscode/
-.idea/
+# 绝不提交 (已被上面的 * 覆盖, 此处仅作提醒):
+#   .work-log.env       — 含 DEEPSEEK_API_KEY
+#   work-log-data.json  — 个人工作记录
+#   *.bak*              — 数据备份

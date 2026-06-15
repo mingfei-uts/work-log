@@ -27,8 +27,9 @@ from datetime import datetime
 from pathlib import Path
 
 SERVER = os.environ.get("WORK_LOG_SERVER", "http://127.0.0.1:19878")
-DATA_FILE = Path(os.environ.get("WORK_LOG_FILE",
-    os.path.expanduser("~/Desktop/Research/work-log-data.json"))).resolve()
+SCRIPT_DIR = Path(__file__).resolve().parent
+DATA_FILE = Path(os.environ.get("WORK_LOG_FILE", str(SCRIPT_DIR / "work-log-data.json"))).resolve()
+REPOS_DIR = Path(os.path.expanduser(os.environ.get("WORK_LOG_REPOS_DIR", str(SCRIPT_DIR))))
 
 def server_ok():
     """Check if server is reachable."""
@@ -328,8 +329,8 @@ def cmd_path():
     return 0
 
 def _get_git_log(date_str):
-    """Get git log across repos under ~/Desktop/Research."""
-    base = Path(os.path.expanduser("~/Desktop/Research"))
+    """Get git log across repos under REPOS_DIR."""
+    base = REPOS_DIR
     repos = []
     if base.exists():
         for d in base.iterdir():
