@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Daily Work Log</title>
+<title>工作日志 · Work Log</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='2' y='2' width='60' height='60' rx='15' fill='%23c1492f'/%3E%3Cpath d='M18 33 L29 44 L47 22' stroke='%23fffefc' stroke-width='6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;600;700&family=LXGW+WenKai+TC&display=swap" rel="stylesheet">
@@ -71,7 +72,7 @@ button:focus:not(:focus-visible),input:focus:not(:focus-visible){outline:none}
 #sidebar{width:228px;min-width:228px;background:var(--sidebar);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:30px 20px 24px;user-select:none;-webkit-user-select:none;overflow-y:auto}
 #logo{font-size:17px;font-weight:700;letter-spacing:1px;color:var(--ink);margin-bottom:6px;display:flex;align-items:center;gap:8px}
 /* 印章点 — 朱砂方印 */
-#logo .dot{width:9px;height:9px;border-radius:2px;background:var(--seal);box-shadow:0 0 0 2px rgba(193,73,47,.15)}
+#logo .logo-mark{flex-shrink:0;border-radius:6px;box-shadow:0 1px 3px rgba(193,73,47,.25)}
 #srv-indicator{display:flex;align-items:center;gap:5px;margin-bottom:14px;font-size:10px;color:var(--ink-3)}
 #srv-indicator .si-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
 #srv-indicator .si-dot.ok{background:var(--sage)}#srv-indicator .si-dot.no{background:var(--amber)}
@@ -346,7 +347,7 @@ button:focus:not(:focus-visible),input:focus:not(:focus-visible){outline:none}
   <div id="server-banner" class="hidden"><span class="sb-dot"></span><span id="sb-text"></span><button id="sb-retry">重试</button></div>
 
   <aside id="sidebar">
-    <div id="logo"><span class="dot"></span> 工作日志</div>
+    <div id="logo"><svg class="logo-mark" width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="20" height="20" rx="5.5" fill="var(--seal)"/><path d="M6.2 11.2 L9.3 14.3 L15.2 7.4" stroke="#fffefc" stroke-width="2.1" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg> 工作日志</div>
     <div id="srv-indicator"><span class="si-dot no" id="si-dot"></span><span id="si-text">离线</span></div>
     <nav id="side-nav">
       <button class="active" data-view="log">日志</button>

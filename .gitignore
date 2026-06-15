@@ -16,6 +16,9 @@
 !work-log-server.py
 !work-log-cli.py
 !start-work-log.sh
+!work-log-logo.svg
+!screenshots/
+!screenshots/*.png
 
 # 绝不提交 (已被上面的 * 覆盖, 此处仅作提醒):
 #   .work-log.env       — 含 DEEPSEEK_API_KEY

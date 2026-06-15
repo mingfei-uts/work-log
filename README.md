@@ -1,11 +1,13 @@
 <div align="center">
 
-# 📋 Work Log
+<img src="work-log-logo.svg" alt="Work Log" width="260">
 
 **一个纯本地、注重隐私、带 AI 自动总结的每日工作日志。**
 任务管理 · 时间追踪 · Markdown 笔记 · AI 总结 · 周报 · Claude Code 会话导入
 
 宋体标题、暖纸配色、朱砂点睛 —— 像一本电子手帐，而不是又一个 SaaS 后台。
+
+<img src="screenshots/01-log.png" alt="界面预览" width="820">
 
 </div>
 

@@ -1,0 +1,21 @@
+<svg width="320" height="96" viewBox="0 0 320 96" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .wm  { font-family: "Noto Serif SC", "Songti SC", STSong, serif; font-weight: 700; }
+    .sub { font-family: "SF Mono","Fira Code",monospace; letter-spacing: 3px; }
+  </style>
+  <!-- 朱砂印章 + 对勾 (mark) -->
+  <g transform="translate(8,16)">
+    <rect x="1.5" y="1.5" width="61" height="61" rx="15"
+          fill="#c1492f"/>
+    <rect x="1.5" y="1.5" width="61" height="61" rx="15"
+          fill="none" stroke="#fff" stroke-opacity="0.18" stroke-width="2"/>
+    <!-- 对勾 -->
+    <path d="M18 33 L29 44 L47 22" stroke="#fffefc" stroke-width="6"
+          fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- 印章纹理点 -->
+    <circle cx="52" cy="12" r="1.6" fill="#fff" fill-opacity="0.25"/>
+  </g>
+  <!-- 文字 -->
+  <text x="88" y="48" class="wm" font-size="34" fill="#1a1a1a">工作日志</text>
+  <text x="89" y="72" class="sub" font-size="13" fill="#8f8f8f">WORK&#160;LOG</text>
+</svg>

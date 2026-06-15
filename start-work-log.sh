@@ -25,8 +25,16 @@ pkill -f "work-log-server.py" 2>/dev/null; sleep 0.4
 echo "  启动 日志API (:$API_PORT)..."
 PYTHONUNBUFFERED=1 python3 "$SCRIPT_DIR/work-log-server.py" --port "$API_PORT" >/tmp/wl-server.log 2>&1 &
 
-# 2) HTML 空间 (htmlspace)
-start_if_down "$SPACE_PORT" "HTML空间" "python3 '$SCRIPT_DIR/htmlspace/htmlspace.py' --port $SPACE_PORT"
+# 2) HTML 空间 (htmlspace) — 可选, 找子目录或同级目录的 htmlspace
+HTMLSPACE=""
+for cand in "$SCRIPT_DIR/htmlspace/htmlspace.py" "$SCRIPT_DIR/../htmlspace/htmlspace.py"; do
+  [ -f "$cand" ] && { HTMLSPACE="$cand"; break; }
+done
+if [ -n "$HTMLSPACE" ]; then
+  start_if_down "$SPACE_PORT" "HTML空间" "python3 '$HTMLSPACE' --port $SPACE_PORT"
+else
+  echo "  HTML空间 未安装 (可选, 跳过)"
+fi
 
 # 3) 静态页服务 (serve 日志 HTML, 让 iframe + fetch 走 http)
 start_if_down "$WEB_PORT" "静态页" "cd '$SCRIPT_DIR' && python3 -m http.server $WEB_PORT --bind 127.0.0.1"
