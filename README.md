@@ -193,8 +193,3 @@ work-log-cli.py      ← 命令行入口 (today / summary / stats / gitlog ...)
 - **总结频率**：改 `.work-log.env` 的 `WORK_LOG_SCHEDULE`。
 - **总结风格**：改 `work-log-server.py` 里 `generate_ai_summary` 的 prompt。
 
----
-
-## 📄 License
-
-MIT — 见 [LICENSE](LICENSE)。随便用、随便改。
