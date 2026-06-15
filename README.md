@@ -1,6 +1,6 @@
 <div align="center">
 
-# 📋 Work Log · 日系墨纸工作日志
+# 📋 Work Log
 
 **一个纯本地、注重隐私、带 AI 自动总结的每日工作日志。**
 任务管理 · 时间追踪 · Markdown 笔记 · AI 总结 · 周报 · Claude Code 会话导入
@@ -184,7 +184,6 @@ work-log-cli.py      ← 命令行入口 (today / summary / stats / gitlog ...)
 
 - 所有数据存在本地 `work-log-data.json`，**不联网、不上传**。
 - 仅当你主动点「总结/周报」或开启定时，才会把**当天的任务/笔记/Git 摘要**发送给**你自己配置的** AI API。不配 key 则完全离线。
-- `.work-log.env`（含 key）和 `work-log-data.json`（含工作内容）已被 `.gitignore` 排除，不会进仓库。
 
 ---
 
@@ -199,9 +198,3 @@ work-log-cli.py      ← 命令行入口 (today / summary / stats / gitlog ...)
 ## 📄 License
 
 **PolyForm Noncommercial 1.0.0** — 见 [LICENSE](LICENSE)。
-
-- ✅ **可以**：个人使用、学习研究、修改、二次开发、分享、非营利组织/教育机构使用
-- ❌ **不可以**：用于任何商业目的
-- 分享或二改时需保留版权声明（`Required Notice`）
-
-如需商业授权，请联系作者。
