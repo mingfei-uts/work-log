@@ -198,4 +198,10 @@ work-log-cli.py      ← 命令行入口 (today / summary / stats / gitlog ...)
 
 ## 📄 License
 
-MIT — 见 [LICENSE](LICENSE)。随便用、随便改。
+**PolyForm Noncommercial 1.0.0** — 见 [LICENSE](LICENSE)。
+
+- ✅ **可以**：个人使用、学习研究、修改、二次开发、分享、非营利组织/教育机构使用
+- ❌ **不可以**：用于任何商业目的
+- 分享或二改时需保留版权声明（`Required Notice`）
+
+如需商业授权，请联系作者。
