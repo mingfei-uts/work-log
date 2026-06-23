@@ -1,0 +1,28 @@
+# Render 蓝图 — 在 Render 控制台 New + → Blueprint, 选这个仓库即可
+# 注意: 持久化磁盘 (disk) 是付费特性。免费实例的文件系统是临时的,
+#        重启/重新部署会丢数据。要长期保存数据务必挂载下面的 disk。
+services:
+  - type: web
+    name: work-log
+    runtime: python
+    plan: starter            # 免费实例改为 free; 但 free 无 disk, 数据会丢
+    buildCommand: ""         # 纯标准库, 无需构建
+    startCommand: python3 work-log-server.py
+    healthCheckPath: /ping
+    envVars:
+      - key: WORK_LOG_FILE
+        value: /data/work-log-data.json   # 指向持久化磁盘
+      - key: WORK_LOG_PASSWORD
+        sync: false           # 在控制台手动填 (登录密码, 必填!)
+      - key: WORK_LOG_USER
+        value: admin
+      - key: DEEPSEEK_API_KEY
+        sync: false           # 在控制台手动填 (AI 总结用; 不填则禁用 AI)
+      - key: WORK_LOG_AI_MODEL
+        value: deepseek-chat
+      - key: WORK_LOG_SCHEDULE
+        value: "18:00"        # 注意: 走服务器时区 (通常 UTC)
+    disks:
+      - name: work-log-data
+        mountPath: /data
+        sizeGB: 1

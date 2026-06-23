@@ -182,10 +182,45 @@ work-log-cli.py      ← 命令行入口 (today / summary / stats / gitlog ...)
 
 ---
 
+## ☁️ 部署到云（可选，让任何设备随时访问）
+
+默认是本地工具。如果想让手机、其他电脑、甚至你电脑关机时也能访问，可以部署到 PaaS（Render / Railway）。服务器**同源托管网页 + API**，一个进程搞定。
+
+> ⚠️ **上云前必读**
+> - **必须设密码**：设 `WORK_LOG_PASSWORD`，否则任何人猜到网址就能读写你全部数据。服务器会用 HTTP Basic Auth 拦截。
+> - **必须挂持久化磁盘**：PaaS 免费实例文件系统是临时的，重启即丢数据。要把 `WORK_LOG_FILE` 指向挂载的磁盘（如 `/data/work-log-data.json`）。
+> - **两个功能会失效**：Git 提交扫描、Claude Code 会话导入依赖你**本地电脑**，云端没有这些文件，相关内容会为空。云端保留：任务 / 计时 / 笔记 / AI 总结 / 周报。
+
+### Render（含 `render.yaml` 蓝图）
+
+1. 把本仓库推到你的 GitHub
+2. Render → New + → **Blueprint** → 选这个仓库（自动读 `render.yaml`）
+3. 在环境变量里填：`WORK_LOG_PASSWORD`（登录密码）、`DEEPSEEK_API_KEY`（AI 总结，可选）
+4. 部署完成，访问 `https://你的应用.onrender.com`，浏览器弹登录框，输 `admin` + 你设的密码
+
+### Railway
+
+1. New Project → Deploy from GitHub → 选仓库（自动识别 Python + `Procfile`）
+2. Variables 里加：`WORK_LOG_PASSWORD`、`DEEPSEEK_API_KEY`、`WORK_LOG_FILE=/data/work-log-data.json`
+3. 加一个 Volume 挂到 `/data`（持久化）
+4. 部署后用生成的域名访问
+
+### 关键环境变量（云端）
+
+| 变量 | 必填 | 说明 |
+|---|---|---|
+| `WORK_LOG_PASSWORD` | ✅ | 登录密码，公网必设 |
+| `WORK_LOG_FILE` | ✅ | 指向持久化磁盘，如 `/data/work-log-data.json` |
+| `DEEPSEEK_API_KEY` | 可选 | AI 总结 |
+| `PORT` | 自动 | PaaS 注入，无需手填（服务器自动绑 `0.0.0.0`）|
+
+---
+
 ## 🔐 隐私
 
-- 所有数据存在本地 `work-log-data.json`，**不联网、不上传**。
+- **本地模式**：所有数据存在 `work-log-data.json`，**不联网、不上传**。
 - 仅当你主动点「总结/周报」或开启定时，才会把**当天的任务/笔记/Git 摘要**发送给**你自己配置的** AI API。不配 key 则完全离线。
+- **云端模式**：数据和 key 存在你自己的云服务器上，受登录密码保护。
 
 ---
 

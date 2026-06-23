@@ -1,0 +1,2 @@
+# Work Log 仅依赖 Python 标准库, 无需安装任何包。
+# 此文件存在是为了让 PaaS (Render/Railway) 识别为 Python 项目。

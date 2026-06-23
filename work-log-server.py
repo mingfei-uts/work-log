@@ -15,6 +15,8 @@ Features:
 
 import json
 import os
+import base64
+import mimetypes
 import subprocess
 import sys
 import tempfile
@@ -40,9 +42,15 @@ if _ENV_FILE.exists():
 # ---- Config (portable: 默认基于脚本位置, 环境变量可覆盖) ----
 SCRIPT_DIR = Path(__file__).resolve().parent
 
-# 数据文件: 默认放脚本同目录
+# 数据文件: 默认放脚本同目录 (云端建议指向持久化磁盘, 如 /data/work-log-data.json)
 DATA_FILE = Path(os.environ.get("WORK_LOG_FILE", str(SCRIPT_DIR / "work-log-data.json"))).resolve()
-PORT = int(os.environ.get("WORK_LOG_PORT", 19878))
+# 端口: PaaS 注入 $PORT; 本地用 WORK_LOG_PORT 或 19878
+PORT = int(os.environ.get("PORT") or os.environ.get("WORK_LOG_PORT", 19878))
+# 绑定地址: PaaS($PORT 存在)自动绑 0.0.0.0 对外; 本地绑 127.0.0.1 仅本机。WORK_LOG_HOST 可强制覆盖
+HOST = os.environ.get("WORK_LOG_HOST") or ("0.0.0.0" if os.environ.get("PORT") else "127.0.0.1")
+# 鉴权: 设了 WORK_LOG_PASSWORD 才开启 HTTP Basic Auth (本地不设=零配置); 公网部署务必设置!
+AUTH_USER = os.environ.get("WORK_LOG_USER", "admin")
+AUTH_PASS = os.environ.get("WORK_LOG_PASSWORD", "")
 
 # 扫描 git 提交的目录: 默认脚本所在目录, 可用 WORK_LOG_REPOS_DIR 指向你的项目根目录
 RESEARCH_DIR = Path(os.path.expanduser(os.environ.get("WORK_LOG_REPOS_DIR", str(SCRIPT_DIR))))
@@ -578,11 +586,51 @@ class WorkLogHandler(BaseHTTPRequestHandler):
         if n == 0: return None
         return json.loads(self.rfile.read(n).decode('utf-8'))
 
+    # ---- 鉴权: 设了 AUTH_PASS 才校验 (HTTP Basic) ----
+    def _authed(self):
+        if not AUTH_PASS:
+            return True  # 本地零配置, 不鉴权
+        hdr = self.headers.get('Authorization', '')
+        if hdr.startswith('Basic '):
+            try:
+                u, _, p = base64.b64decode(hdr[6:]).decode('utf-8').partition(':')
+                if u == AUTH_USER and p == AUTH_PASS:
+                    return True
+            except Exception:
+                pass
+        self.send_response(401)
+        self.send_header('WWW-Authenticate', 'Basic realm="Work Log"')
+        self._cors(); self.send_header('Content-Type', 'text/plain; charset=utf-8')
+        self.end_headers(); self.wfile.write('401 需要登录'.encode('utf-8'))
+        return False
+
+    # ---- 静态文件 (仅白名单, 绝不暴露数据/密钥/源码) ----
+    def _serve_static(self, path):
+        rel = path.lstrip('/') or 'daily-work-log.html'
+        if rel in ('', 'index.html'):
+            rel = 'daily-work-log.html'
+        allowed = (rel == 'daily-work-log.html' or rel == 'work-log-logo.svg'
+                   or (rel.startswith('screenshots/') and rel.endswith('.png') and '..' not in rel))
+        target = (SCRIPT_DIR / rel).resolve()
+        if not allowed or SCRIPT_DIR not in target.parents and target.parent != SCRIPT_DIR or not target.is_file():
+            return self._err(404, "Not found")
+        ctype = mimetypes.guess_type(str(target))[0] or 'application/octet-stream'
+        data = target.read_bytes()
+        self.send_response(200); self._cors()
+        self.send_header('Content-Type', ctype)
+        self.send_header('Content-Length', str(len(data)))
+        self.end_headers(); self.wfile.write(data)
+
     def do_OPTIONS(self):
         self.send_response(204); self._cors(); self.end_headers()
 
     def do_GET(self):
+        if not self._authed(): return
         parsed = urlparse(self.path); path = parsed.path.rstrip('/'); qs = parse_qs(parsed.query)
+        # 非 API 路径 → 静态文件 (网页/logo/截图)
+        API_GET = ('/ping','/state','/stats','/weekly-report','/cc-sessions')
+        if path not in API_GET and not path.startswith('/summary/'):
+            return self._serve_static(parsed.path)
         try:
             if path == '/ping':
                 return self._ok({"ok": True, "file": str(DATA_FILE), "ai": bool(AI_KEY)})
@@ -651,6 +699,7 @@ class WorkLogHandler(BaseHTTPRequestHandler):
             return self._err(500, str(e))
 
     def do_POST(self):
+        if not self._authed(): return
         parsed = urlparse(self.path); path = parsed.path.rstrip('/')
         try:
             if path == '/state':
@@ -791,23 +840,19 @@ def main():
                 time.sleep(30)
         threading.Thread(target=scheduler, daemon=True).start()
 
-    server = HTTPServer(('127.0.0.1', port), WorkLogHandler)
+    auth_s = "✅ 已启用密码" if AUTH_PASS else "⚠ 未设密码 (公网部署务必设 WORK_LOG_PASSWORD!)"
+    server = HTTPServer((HOST, port), WorkLogHandler)
     print(f"""
 ╔══════════════════════════════════════════════════════╗
-║      📋  Work Log Server v2                          ║
+║      📋  Work Log Server                             ║
 ╠══════════════════════════════════════════════════════╣
-║  http://localhost:{port}                              ║
+║  bind:  {HOST}:{port}
 ║  Data:  {str(DATA_FILE)}
 ║  AI:    {ai_s} ({AI_MODEL})
 ║  Repos: {len(repos)} found
 ║  Auto:  {schedule or 'off'}
-║                                                      ║
-║  New in v2:                                          ║
-║    POST /parse-task       NL → 结构化任务             ║
-║    POST /cc-import        从 CC 会话导入任务          ║
-║    GET  /cc-sessions      查看 CC 会话分析            ║
-║    GET  /weekly-report    生成周报                   ║
-║    Git diff --stat        AI 总结更详细              ║
+║  Auth:  {auth_s}
+║  网页:  同源托管于 /  (服务器直接提供 daily-work-log.html)
 ║                                                      ║
 ║  Ctrl+C to stop                                      ║
 ╚══════════════════════════════════════════════════════╝
